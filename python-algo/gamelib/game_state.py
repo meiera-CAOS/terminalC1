@@ -2,10 +2,10 @@ import math
 import json
 import sys
 
-from .navigation import ShortestPathFinder
-from .util import send_command, debug_write
-from .unit import GameUnit
-from .game_map import GameMap
+from navigation import ShortestPathFinder
+from util import send_command, debug_write
+from unit import GameUnit
+from game_map import GameMap
 
 def is_stationary(unit_type):
     """
@@ -36,7 +36,7 @@ class GameState:
         * ARENA_SIZE (int): The size of the arena
         * HALF_ARENA (int): Half the size of the arena
         * MP (int): A constant representing the Mobile Points resource, used in the get_resource function
-        * SP (int): A constant representing the SP resource, used in the get_resource function
+        * SP (int): A constant representing the Structure Points resource, used in the get_resource function
          
         * game_map (:obj: GameMap): The current GameMap. To retrieve a list of GameUnits at a location, use game_map[x, y]
         * turn_number (int): The current turn number. Starts at 0.
@@ -165,6 +165,18 @@ class GameState:
         held_resource = self.get_resource(resource_type, player_index)
         self._player_resources[player_index][resource_key] = held_resource + amount
 
+    def set_resource(self, resource_type, amount, player_index=0):  # modified __set_resource to not add but set
+        """
+        Sets the resources for the given player_index and resource_type.
+        Is automatically called by other provided functions.
+        Adds the value amount to the current held resources
+        """
+        if resource_type == self.MP:
+            resource_key = 'MP'
+        elif resource_type == self.SP:
+            resource_key = 'SP'
+        self._player_resources[player_index][resource_key] = amount
+
     def _invalid_player_index(self, index):
         self.warn("Invalid player index {} passed, player index should always be 0 (yourself) or 1 (your opponent)".format(index))
     
@@ -180,7 +192,7 @@ class GameState:
         send_command(build_string)
         send_command(deploy_string)
 
-    def get_resource(self, resource_type, player_index = 0):
+    def get_resource(self, resource_type, player_index=0):
         """Gets a players resources
 
         Args:

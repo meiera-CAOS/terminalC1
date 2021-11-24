@@ -1,7 +1,9 @@
 import unittest
 import json
-from .game_state import GameState
-from .unit import GameUnit
+# from .simulation import simulate
+from game_state import GameState
+from unit import GameUnit
+
 
 class BasicTests(unittest.TestCase):
 
