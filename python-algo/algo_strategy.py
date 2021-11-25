@@ -42,6 +42,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         MP = 1
         SP = 0
         # This is a good place to do initial setup
+        self.PLAYER0 = 0 # this is usu
+        self.PLAYER1 = 1 # this is our adversary to beat
         self.scored_on_locations = []
 
     def on_turn(self, turn_state):
@@ -82,6 +84,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         if game_state.turn_number < 5:
             self.stall_with_interceptors(game_state)
         else:
+            ### Steven ###
+            score = self.get_score(game_state)
+
+
             # Now let's analyze the enemy base to see where their defenses are concentrated.
             # If they have many units in the front we can build a line for our demolishers to attack them at long range.
             if self.detect_enemy_unit(game_state, unit_type=None, valid_x=None, valid_y=[14, 15]) > 10:
@@ -195,7 +201,7 @@ class AlgoStrategy(gamelib.AlgoCore):
         # Now just return the location that takes the least damage
         return location_options[damages.index(min(damages))]
 
-    def detect_enemy_unit(self, game_state, unit_type=None, valid_x = None, valid_y = None):
+    def detect_enemy_unit(self, game_state, unit_type=None, valid_x=None, valid_y=None):
         total_units = 0
         for location in game_state.game_map:
             if game_state.contains_stationary_unit(location):
@@ -231,6 +237,60 @@ class AlgoStrategy(gamelib.AlgoCore):
                 gamelib.debug_write("Got scored on at: {}".format(location))
                 self.scored_on_locations.append(location)
                 gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
+
+    def get_structures(self, game_state):
+        """
+        This goes through the current game_map and returns the structures that are currently on the game map
+        :param game_state: Current GameState object
+        :return:           Returns a dict where key is the player id and values their current structures on the game map
+        """
+        game_map = game_state.game_map._GameMap__map  # list of list, cf. game_map __empty_grid function
+        # type(game_map): <class 'list'>
+        # len(game_map): 28
+        #
+        # type(game_map[0]): <class 'list'>
+        # len(game_map[0]): 28
+        # print('#' * 10 + ' algo_strategy line 246, type(game_map): {}, len(game_map): {}, game_map: {}'.format(type(game_map), len(game_map), game_map))
+        # print('#' * 10 + ' algo_strategy line 247, type(game_map[0]): {}, len(game_map[0]): {}, game_map[0]: {}'.format(type(game_map[0]), len(game_map[0]), game_map[0]))
+
+        # 0 = us
+        # 1 = adversary
+        structures = {0: [], 1: []}
+        for x, x_item in enumerate(game_map):
+            for y, y_item in enumerate(x_item):
+                if y_item:
+                    # y_item is a unit
+                    #
+                    # type(y_item): <class 'list'>
+                    # len(y_item): 1
+                    # print('#' * 10 + ' algo_strategy line 261, x: {}, y: {}, type(y_item): {}, y_item[0].player_index: {}, y_item[0].unit_type: {}, y_item[0].health, y_item[0].location: {}, y_item[0].pending_removal: {}, y_item[0].upgrade: {}'.format(x, y, type(y_item), y_item[0].player_index, y_item[0].unit_type, y_item[0].health, [y_item[0].x, y_item[0].y], y_item[0].pending_removal, y_item[0].upgrade))
+
+                    if y_item[0].player_index == self.PLAYER0:
+                        structures[self.PLAYER0].append(y_item[0])
+                    else:
+                        structures[self.PLAYER1].append(y_item[0])
+
+        return structures
+
+    def get_score(self, game_state):
+        current_game_map = game_state.game_map
+        # TODO: - get value of the placed structure including their upgrade status & unit.health
+        #       - structure_score = unit.health / unit.max_health * unit.cost[0]; MP=1, SP=0
+        structures = self.get_structures(game_state)
+        player0_structures = structures[self.PLAYER0] # this is a list containing player0's current structures
+        structure_score = 0
+        for structure_unit in player0_structures:
+            # print('#' * 10 + ' algo_strategy line 284, len(player0_structures): {}, type(structure_unit): {}, location: {}'.format(len(player0_structures), type(structure_unit), [structure_unit.x, structure_unit.y]))
+            # TODO: - make sure unit cost include the upgrade cost
+            #       - could also their damage into the score
+            structure_score += structure_unit.health / structure_unit.max_health * structure_unit.cost[SP]
+
+        # print('#' * 10 + ' algo_strategy line 286, structure_score: {}'.format(structure_score))
+        hp = game_state.my_health
+        sp, mp = game_state.get_resources()
+        # TODO: - do we want to ceiling to the structure_score to ensure it doesn't focus only on structure building
+        score = hp - sp - mp + structure_score
+        return score
 
 
 if __name__ == "__main__":

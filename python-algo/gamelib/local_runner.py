@@ -46,6 +46,6 @@ if __name__ == '__main__':
         algo2 = algo2 + trailing_char + "run.sh"
 
     print("Algo 1: ", algo1)
-    print("Algo 2:", algo2)
+    print("Algo 2: ", algo2)
 
     run_single_game("cd {} && java -jar engine.jar work {} {}".format(parent_dir, algo1, algo2))

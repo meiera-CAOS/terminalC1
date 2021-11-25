@@ -16,7 +16,7 @@ class GameMap:
         * HALF_ARENA (int): Half of the size of the arena.
         * TOP_RIGHT (int): A constant that represents the top right edge
         * TOP_LEFT (int): A constant that represents the top left edge
-        * BOTTOM_LEFT (int): Hidden challenge! Can you guess what this constant represents???
+        * BOTTOM_LEFT (int): Hidden challenge! Can you guess what this constant represents??? A constant that represents the bottom left edge
         * BOTTOM_RIGHT (int): A constant that represents the bottom right edge
 
     """
