@@ -1,7 +1,7 @@
 from unittest import TestCase
 import json
-import game_state
-import simulation
+from .gamelib import game_state
+from .gamelib import simulation
 
 class Test(TestCase):
 

@@ -1,6 +1,6 @@
-import game_state
-import game_map
-import util
+from .game_state import GameState
+# from game_map
+# from util
 
 
 """
