@@ -1,6 +1,47 @@
 from .game_state import GameState
+from .unit import GameUnit
 # from game_map
 # from util
+
+
+def refund(game_obj, locations, player_idx=0):  # return refunded resource
+    """Calculates refund of existing friendly structures in the given locations.
+
+    Args:
+        game_obj: the game object
+        locations: A location or list of locations we want to remove structures from
+        player_idx: The player who attempts to remove a structure
+
+    Returns:
+        The refunded SP for the removal
+    """
+    if type(locations[0]) == int:
+        locations = [locations]
+    refund_sum = 0
+    for location in locations:
+        if game_obj.contains_stationary_unit(location) and ((player_idx == 0 and location[1] < game_obj.HALF_ARENA)
+                                                            or (player_idx == 1 and location[1] >= game_obj.HALF_ARENA)):
+            # select game unit at location
+            curr_unit = game_obj.contains_stationary_unit(location)
+            '''
+            is_upgraded = curr_unit.upgraded  # detect if it's upgraded
+            structure_type = curr_unit.unit_type  # detect what structure it is
+            structure_cost = game_obj.type_cost(structure_type, upgrade=is_upgraded)[0]
+            if curr_unit.upgraded:
+                structure_cost += game_obj.type_cost(structure_type, upgrade=False)[0]  # returns cost in [SP, MP]
+            '''
+            print("structure cost of curr unit = ", curr_unit.cost[0], curr_unit)
+            #  TODO: fix unit's health of wall upgraded being 12 not 120.
+            # todo: why did the health not update with the upgrade? - cause it's in build stack and not yet build?
+            # only wall upgrade increases health (to 120)
+
+            # detect it's health ratio
+            # structure_value = round(structure_cost * (curr_unit.health / curr_unit.max_health) * 0.75, 1)
+            structure_value = round(curr_unit.cost[0] * 1 * 0.75, 1)
+            refund_sum += structure_value
+        else:
+            game_obj.warn("Could not refund a unit from {}. Location has no structures or is enemy territory.".format(location))
+    return refund_sum
 
 
 """
@@ -20,6 +61,8 @@ def simulate(game_obj):
     2) All units attack. See ‘Targeting’ in advanced info
     3) Units that were reduced below 0 health are removed
     """
+
+    # TODO: at end of round, remove deleted structures and give the corresponding player refund.
 
     # add MP = 1 resources
     curr_mp_0 = game_obj.get_resource(resource_type=1, player_index=0)
@@ -41,6 +84,8 @@ def simulate(game_obj):
 # use game_state.get_attackers to find stationary units threatening a given location
 # use game_map.get_locations_in_range to find coordinates to check if there is an enemy unit in range to attack
 # use game_map.distance_between_locations
+# use game_state.attempt_spawn / attempt_remove / attempt_upgrade
+# contains_stationary_unit
 # game_map.add_unit
 # game_map.remove_unit
 # simulate removal of structures which get removed.

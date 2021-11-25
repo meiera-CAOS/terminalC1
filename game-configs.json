@@ -66,6 +66,7 @@
       "refundPercentage": 0.75,
       "turnsRequiredToRemove": 1,
       "upgrade": {
+        "cost1":6.0,
         "attackDamageWalker":32.0
       }
     },

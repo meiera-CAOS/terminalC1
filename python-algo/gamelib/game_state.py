@@ -217,7 +217,7 @@ class GameState:
         resources = self._player_resources[player_index]
         return resources.get(resource_key, None)
 
-    def get_resources(self, player_index = 0):
+    def get_resources(self, player_index=0):
         """Gets a players resources as a list
 
         Args:
@@ -236,7 +236,7 @@ class GameState:
         resources = self._player_resources[player_index]
         return [resources.get(resource_key1, None), resources.get(resource_key2, None)]
 
-    def number_affordable(self, unit_type):
+    def number_affordable(self, unit_type, player_index=0):
         """The number of units of a given type we can afford
 
         Args:
@@ -294,6 +294,7 @@ class GameState:
             MP = round(MP, 1)
         return MP
 
+    # for upgraded units only gives cost of the upgrade
     def type_cost(self, unit_type, upgrade=False):
         """Gets the cost of a unit based on its type
 
@@ -315,18 +316,18 @@ class GameState:
 
         return cost_base
 
-
-    def can_spawn(self, unit_type, location, num=1):
+    def can_spawn(self, unit_type, location, num=1, player_idx=0):
         """Check if we can spawn a unit at a location. 
 
         To units, we need to be able to afford them, and the location must be
-        in bounds, unblocked, on our side of the map, not on top of a unit we can't stack with, 
+        in bounds, unblocked, on player_idxs' side of the map, not on top of a unit we can't stack with,
         and on an edge if the unit is mobile.
 
         Args:
             unit_type: The type of the unit
             location: The location we want to spawn the unit
             num: The number of units we want to spawn
+            player_idx: The player that attempts to spawn a unit
 
         Returns:
             True if we can spawn the unit(s)
@@ -341,11 +342,19 @@ class GameState:
                 self.warn("Could not spawn {} at location {}. Location invalid.".format(unit_type, location))
             return False
 
-        affordable = self.number_affordable(unit_type) >= num
+        affordable = self.number_affordable(unit_type, player_index=player_idx) >= num
         stationary = is_stationary(unit_type)
-        blocked = self.contains_stationary_unit(location) or (stationary and len(self.game_map[location[0],location[1]]) > 0)
-        correct_territory = location[1] < self.HALF_ARENA
-        on_edge = location in (self.game_map.get_edge_locations(self.game_map.BOTTOM_LEFT) + self.game_map.get_edge_locations(self.game_map.BOTTOM_RIGHT))
+        blocked = self.contains_stationary_unit(location) or (stationary and
+                                                              len(self.game_map[location[0], location[1]]) > 0)
+        if player_idx == 0:
+            correct_territory = location[1] < self.HALF_ARENA
+            on_edge = location in (self.game_map.get_edge_locations(self.game_map.BOTTOM_LEFT) +
+                                   self.game_map.get_edge_locations(self.game_map.BOTTOM_RIGHT))
+        else:
+            assert(player_idx == 1)
+            correct_territory = location[1] >= self.HALF_ARENA
+            on_edge = location in (self.game_map.get_edge_locations(self.game_map.TOP_LEFT) +
+                                   self.game_map.get_edge_locations(self.game_map.TOP_RIGHT))
 
         if self.enable_warnings:
             fail_reason = ""
@@ -364,13 +373,14 @@ class GameState:
                 (stationary or on_edge) and
                 (not stationary or num == 1))
 
-    def attempt_spawn(self, unit_type, locations, num=1):
+    def attempt_spawn(self, unit_type, locations, num=1, player_idx=0):
         """Attempts to spawn new units with the type given in the given locations.
 
         Args:
             unit_type: The type of unit we want to spawn
             locations: A single location or list of locations to spawn units at
             num: The number of units of unit_type to deploy at the given location(s)
+            player_idx: The player who attempts to spawn
 
         Returns:
             The number of units successfully spawned
@@ -388,12 +398,12 @@ class GameState:
         spawned_units = 0
         for location in locations:
             for i in range(num):
-                if self.can_spawn(unit_type, location, 1):
+                if self.can_spawn(unit_type, location, 1, player_idx=player_idx):
                     x, y = map(int, location)
                     costs = self.type_cost(unit_type)
-                    self.__set_resource(SP, 0 - costs[SP])
-                    self.__set_resource(MP, 0 - costs[MP])
-                    self.game_map.add_unit(unit_type, location, 0)
+                    self.__set_resource(SP, 0 - costs[SP], player_index=player_idx)
+                    self.__set_resource(MP, 0 - costs[MP], player_index=player_idx)
+                    self.game_map.add_unit(unit_type, location, player_index=player_idx)
                     if is_stationary(unit_type):
                         self._build_stack.append((unit_type, x, y))
                     else:
@@ -403,11 +413,12 @@ class GameState:
                     break
         return spawned_units
 
-    def attempt_remove(self, locations):
+    def attempt_remove(self, locations, player_idx=0):
         """Attempts to remove existing friendly structures in the given locations.
 
         Args:
             locations: A location or list of locations we want to remove structures from
+            player_idx: The player who attempts to remove a structure
 
         Returns:
             The number of structures successfully flagged for removal
@@ -417,7 +428,8 @@ class GameState:
             locations = [locations]
         removed_units = 0
         for location in locations:
-            if location[1] < self.HALF_ARENA and self.contains_stationary_unit(location):
+            if self.contains_stationary_unit(location) and ((player_idx == 0 and location[1] < self.HALF_ARENA)
+                                                            or (player_idx == 1 and location[1] >= self.HALF_ARENA)):
                 x, y = map(int, location)
                 self._build_stack.append((REMOVE, x, y))
                 removed_units += 1
@@ -425,11 +437,12 @@ class GameState:
                 self.warn("Could not remove a unit from {}. Location has no structures or is enemy territory.".format(location))
         return removed_units
 
-    def attempt_upgrade(self, locations):
+    def attempt_upgrade(self, locations, player_idx=0):
         """Attempts to upgrade units in the given locations.
 
         Args:
             locations: A single location or list of locations to upgrade units at
+            player_idx: The player who attempts to upgrade a structure
 
         Returns:
             The number of units successfully upgraded
@@ -440,19 +453,23 @@ class GameState:
             locations = [locations]
         spawned_units = 0
         for location in locations:
-            if location[1] < self.HALF_ARENA and self.contains_stationary_unit(location):
+            if self.contains_stationary_unit(location) and ((player_idx == 0 and location[1] < self.HALF_ARENA)
+                                                            or (player_idx == 1 and location[1] >= self.HALF_ARENA)):
                 x, y = map(int, location)
+                print("contains stationary unit and in players' half ", x, y)  # to debug.
                 existing_unit = None
-                for unit in self.game_map[x,y]:
+                for unit in self.game_map[x, y]:
                     if unit.stationary:
                         existing_unit = unit
 
                 if not existing_unit.upgraded and self.config["unitInformation"][UNIT_TYPE_TO_INDEX[existing_unit.unit_type]].get("upgrade", None) is not None:
+                    print("not upgraded and can be upgraded ", x, y)
                     costs = self.type_cost(existing_unit.unit_type, True)
-                    resources = self.get_resources()
+                    resources = self.get_resources(player_index=player_idx)
                     if resources[SP] >= costs[SP] and resources[MP] >= costs[MP]:
-                        self.__set_resource(SP, 0 - costs[SP])
-                        self.__set_resource(MP, 0 - costs[MP])
+                        print("can afford upgrade cost ", x, y)
+                        self.__set_resource(SP, 0 - costs[SP], player_index=player_idx)
+                        self.__set_resource(MP, 0 - costs[MP], player_index=player_idx)
                         existing_unit.upgrade()
                         self._build_stack.append((UPGRADE, x, y))
                         spawned_units += 1
