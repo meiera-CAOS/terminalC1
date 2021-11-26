@@ -274,19 +274,40 @@ class Test(TestCase):
         # e.g three not upgraded walls (cost 0.5 each) refund for 0.4 each or 1.2 total
         p_0_refund += simulation.refund(game, [[8, 11], [0, 13], [9, 13], [10, 13], [17, 13], [18, 13]], player_idx=0)
         # refund of 9 + 4.5 + 2*1.5 + 2*0.4 = 17.3
-        self.assertEqual(p_0_refund, 17.3, "refund calculation")
+        self.assertEqual(p_0_refund, 17.3, "p_0 refund calculation")
 
+        # print("resources p1", game.get_resources(1)) 40, 5
         # add structures p1
         support_locations_p1 = [[12, 20], [13, 20], [12, 19], [13, 19]]
         game.attempt_spawn(SUPPORT, support_locations_p1, player_idx=1)
-        p1_sp_cost = p1_sp_cost + 4 * 4
+        p1_sp_cost += 4 * 4
         # extended attempt spawn with player idx, to be allowed to spawn for both players.
 
-        assert(game.contains_stationary_unit([12, 20]))  # TODO: fix, does not spawn!
+        assert(game.contains_stationary_unit([12, 20]))
+        assert(game.contains_stationary_unit([13, 20]))
+        assert(game.contains_stationary_unit([12, 19]))
+        self.assertEqual(game.contains_stationary_unit([13, 19]).unit_type, SUPPORT)
 
         # set health value of structure
+        support_1 = game.contains_stationary_unit([12, 20])
+        support_1.health = support_1.max_health / 2  # 15 of 30
+        support_2 = game.contains_stationary_unit([13, 20])
+        support_2.health = support_2.max_health / 3  # 10 of 30
+        support_3 = game.contains_stationary_unit([13, 19])
+        support_3.health = support_3.max_health * 2 / 5  # 12 of 30
+        support_4 = game.contains_stationary_unit([12, 19])
+        support_4.health = support_4.max_health / 6  # 5 of 30
+
+        # upgrade structure
+        game.attempt_upgrade([[12, 20], [13, 20]], player_idx=1)
+        p1_sp_cost += 2*2
 
         # mark structures to be deleted
+        game.attempt_remove([[12, 20], [13, 20], [12, 19], [13, 19]], player_idx=1)
+        # upgraded at 15 and 10 hp, normal at 12 and 5 hp.
+        p_1_refund += simulation.refund(game, [[12, 20], [13, 20], [12, 19], [13, 19]], player_idx=1)
+        # refund of (2.25 gets rounded down - statistical rounding): 2.2 + 1.5 + 1.2 + 0.5 = 5.4
+        self.assertEqual(p_1_refund, 5.4, "p_1 refund calculation")
 
         # simulate
         sim_game_state = simulation.simulate(game)
@@ -296,7 +317,18 @@ class Test(TestCase):
                          40 - p0_sp_cost + 5 + p_0_refund, "SP resource p0")
         self.assertEqual(sim_game_state.get_resource(resource_type=SP, player_index=1),
                          40 - p1_sp_cost + 5 + p_1_refund, "SP resource p1")
-        self.assertEqual(sim_game_state.my_health, 30)
+        self.assertEqual(sim_game_state.my_health, sim_game_state.enemy_health, 30)
 
         # assert not deleted structure at correct location
+        remaining_turrets_pos = [[27, 13], [19, 11]]
+        remaining_walls_pos = [[11, 13], [16, 13]]
+        for tur in remaining_turrets_pos:
+            self.assertEqual(sim_game_state.contains_stationary_unit(tur), TURRET)
+        for wal in remaining_walls_pos:
+            self.assertEqual(sim_game_state.contains_stationary_unit(wal), WALL)
         # assert deleted structures map empty
+        newly_vacant_pos = [[8, 11], [0, 13], [9, 13], [10, 13], [17, 13],
+                            [18, 13], [12, 20], [13, 20], [12, 19], [13, 19]]
+        for vac in newly_vacant_pos:
+            assert(not sim_game_state.contains_stationary_unit(tur))
+

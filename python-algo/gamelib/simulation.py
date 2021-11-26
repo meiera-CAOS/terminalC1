@@ -1,5 +1,6 @@
 from .game_state import GameState
 from .unit import GameUnit
+# from
 # from game_map
 # from util
 
@@ -23,17 +24,9 @@ def refund(game_obj, locations, player_idx=0):  # return refunded resource
                                                             or (player_idx == 1 and location[1] >= game_obj.HALF_ARENA)):
             # select game unit at location
             curr_unit = game_obj.contains_stationary_unit(location)
-            '''
-            is_upgraded = curr_unit.upgraded  # detect if it's upgraded
-            structure_type = curr_unit.unit_type  # detect what structure it is
-            structure_cost = game_obj.type_cost(structure_type, upgrade=is_upgraded)[0]
-            if curr_unit.upgraded:
-                structure_cost += game_obj.type_cost(structure_type, upgrade=False)[0]  # returns cost in [SP, MP]
-            '''
-            # print("structure cost of curr unit = ", curr_unit.cost[0], curr_unit)
             # detect it's health ratio
             structure_value = round(curr_unit.cost[0] * (curr_unit.health / curr_unit.max_health) * 0.75, 1)
-            # structure_value = round(curr_unit.cost[0] * 1 * 0.75, 1)
+            print("structure cost of curr unit = ", curr_unit.cost[0], curr_unit, structure_value)
             refund_sum = round(refund_sum + structure_value, 1)
         else:
             game_obj.warn("Could not refund a unit from {}. Location has no structures or is enemy territory.".format(location))
@@ -59,6 +52,8 @@ def simulate(game_obj):
     """
 
     # TODO: at end of round, remove deleted structures and give the corresponding player refund.
+    # for standing structures, for each player refund structures marked as remove and remove from gamestate
+
 
     # add MP = 1 resources
     curr_mp_0 = game_obj.get_resource(resource_type=1, player_index=0)
