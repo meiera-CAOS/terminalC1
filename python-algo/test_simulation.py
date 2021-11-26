@@ -260,7 +260,6 @@ class Test(TestCase):
         upgrade_locations_p0 = [[8, 11], [9, 13], [10, 13], [11, 13], [16, 13]]
         print(game.get_resource(SP, 0))
         num_upgrades = game.attempt_upgrade(upgrade_locations_p0, player_idx=0)
-        # TODO: the walls don't get upgraded, why: can't afford cost.? sideeffect of test 1?
         print(num_upgrades)
         # check the 6 locations are upgraded
         for loc in upgrade_locations_p0:
@@ -283,7 +282,7 @@ class Test(TestCase):
         p1_sp_cost = p1_sp_cost + 4 * 4
         # extended attempt spawn with player idx, to be allowed to spawn for both players.
 
-        assert(game.contains_stationary_unit([12, 20]))
+        assert(game.contains_stationary_unit([12, 20]))  # TODO: fix, does not spawn!
 
         # set health value of structure
 

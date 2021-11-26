@@ -17,7 +17,7 @@ def refund(game_obj, locations, player_idx=0):  # return refunded resource
     """
     if type(locations[0]) == int:
         locations = [locations]
-    refund_sum = 0
+    refund_sum = 0.0
     for location in locations:
         if game_obj.contains_stationary_unit(location) and ((player_idx == 0 and location[1] < game_obj.HALF_ARENA)
                                                             or (player_idx == 1 and location[1] >= game_obj.HALF_ARENA)):
@@ -30,15 +30,11 @@ def refund(game_obj, locations, player_idx=0):  # return refunded resource
             if curr_unit.upgraded:
                 structure_cost += game_obj.type_cost(structure_type, upgrade=False)[0]  # returns cost in [SP, MP]
             '''
-            print("structure cost of curr unit = ", curr_unit.cost[0], curr_unit)
-            #  TODO: fix unit's health of wall upgraded being 12 not 120.
-            # todo: why did the health not update with the upgrade? - cause it's in build stack and not yet build?
-            # only wall upgrade increases health (to 120)
-
+            # print("structure cost of curr unit = ", curr_unit.cost[0], curr_unit)
             # detect it's health ratio
-            # structure_value = round(structure_cost * (curr_unit.health / curr_unit.max_health) * 0.75, 1)
-            structure_value = round(curr_unit.cost[0] * 1 * 0.75, 1)
-            refund_sum += structure_value
+            structure_value = round(curr_unit.cost[0] * (curr_unit.health / curr_unit.max_health) * 0.75, 1)
+            # structure_value = round(curr_unit.cost[0] * 1 * 0.75, 1)
+            refund_sum = round(refund_sum + structure_value, 1)
         else:
             game_obj.warn("Could not refund a unit from {}. Location has no structures or is enemy territory.".format(location))
     return refund_sum

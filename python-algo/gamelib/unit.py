@@ -69,6 +69,8 @@ class GameUnit:
         self.attackRange = type_config.get("attackRange", self.attackRange)
         self.shieldRange = type_config.get("shieldRange", self.shieldRange)
         self.max_health = type_config.get("startHealth", self.max_health)
+        if UNIT_TYPE_TO_INDEX[self.unit_type] == 0:  # set upgraded max health for WALLS
+            self.health = self.max_health * self.health / 12.0
         self.shieldPerUnit = type_config.get("shieldPerUnit", self.shieldPerUnit)
         self.cost = [type_config.get("cost1", 0) + self.cost[0], type_config.get("cost2", 0) + self.cost[1]]
         self.upgraded = True
