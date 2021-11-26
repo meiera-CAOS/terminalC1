@@ -1,3 +1,5 @@
+import itertools
+
 import gamelib
 import random
 import math
@@ -85,7 +87,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.stall_with_interceptors(game_state)
         else:
             ### Steven ###
-            score = self.get_score(game_state)
+            score0 = self.get_score(game_state, player_id=self.PLAYER0)
+            score1 = self.get_score(game_state, player_id=self.PLAYER1)
+            score = score0 - score1
 
 
             # Now let's analyze the enemy base to see where their defenses are concentrated.
@@ -249,13 +253,13 @@ class AlgoStrategy(gamelib.AlgoCore):
         # 1 = adversary
         structures = {0: [], 1: []}
         for x, x_item in enumerate(game_map):
-            for y, y_item in enumerate(x_item):
-                if y_item:
+            for y, unit in enumerate(x_item):
+                if unit:
                     # y_item is a unit
-                    if y_item[0].player_index == self.PLAYER0:
-                        structures[self.PLAYER0].append(y_item[0])
+                    if unit[0].player_index == self.PLAYER0:
+                        structures[self.PLAYER0].append(unit[0])
                     else:
-                        structures[self.PLAYER1].append(y_item[0])
+                        structures[self.PLAYER1].append(unit[0])
 
         return structures
 
@@ -290,8 +294,24 @@ class AlgoStrategy(gamelib.AlgoCore):
         sp, mp = game_state.get_resources(player_index=player_id)
 
         # TODO: - do we want to ceiling to the structure_score to ensure it doesn't focus only on structure building
-        score = alpha * hp + beta * sp + gamma * mp + delta * structure_score #+ (max_life - current_life_enemy)
+        score = alpha * hp + beta * sp + gamma * mp + delta * structure_score
         return score
+
+    def combination_generator(self, game_state):
+        # Assume we want to use up all available MP and SP
+        # TODO: - create all possible structure combination based on current game state
+        #       ---- compute all valid coordinations
+        #       ---- make it a constant that gets only computed once
+        #       ---- y < game_map.HALF_ARENA and startx <= x <= endx
+        #       - create all possible combination of starting points for the mobile units
+        #       ---- use game_map.get_edge_locations(quadrant_description=game_map.BOTTOM_LEFT)
+        #       ---- use game_map.get_edge_locations(quadrant_description=game_map.BOTTOM_RIGHT)
+        #       ---- make it a constant that gets only computed once
+        all_structures = self.get_structures(game_state)
+        structures = all_structures[self.PLAYER0]
+        # Assumptions: - restrict supports to Y < 8
+        coordinates_raw = list(itertools.product(range(game_state.HALF_ARENA), range(game_state.ARENA_SIZE)))
+        return
 
 
 if __name__ == "__main__":
