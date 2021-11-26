@@ -355,10 +355,6 @@ class GameState:
             correct_territory = location[1] >= self.HALF_ARENA
             on_edge = location in (self.game_map.get_edge_locations(self.game_map.TOP_LEFT) +
                                    self.game_map.get_edge_locations(self.game_map.TOP_RIGHT))
-            if player_idx == 1:
-                print("p1 in can spawn: valid unit type, in area bounds")
-            print("affordable: ", affordable, ", stationary: ", stationary, ", blocked: ", blocked,
-                  ", correct territory: ", correct_territory)
 
         if self.enable_warnings:
             fail_reason = ""
@@ -396,8 +392,6 @@ class GameState:
         if num < 1:
             self.warn("Attempted to spawn fewer than one units! ({})".format(num))
             return
-        if player_idx == 1:
-            print("attempt spawn for player 1")
 
         if type(locations[0]) == int:
             locations = [locations]
@@ -437,6 +431,7 @@ class GameState:
             if self.contains_stationary_unit(location) and ((player_idx == 0 and location[1] < self.HALF_ARENA)
                                                             or (player_idx == 1 and location[1] >= self.HALF_ARENA)):
                 x, y = map(int, location)
+                self.contains_stationary_unit(location).set_pending_removal()
                 self._build_stack.append((REMOVE, x, y))
                 removed_units += 1
             else:
@@ -462,18 +457,15 @@ class GameState:
             if self.contains_stationary_unit(location) and ((player_idx == 0 and location[1] < self.HALF_ARENA)
                                                             or (player_idx == 1 and location[1] >= self.HALF_ARENA)):
                 x, y = map(int, location)
-                # print("contains stationary unit and in players' half ", x, y)  # to debug.
                 existing_unit = None
                 for unit in self.game_map[x, y]:
                     if unit.stationary:
                         existing_unit = unit
 
                 if not existing_unit.upgraded and self.config["unitInformation"][UNIT_TYPE_TO_INDEX[existing_unit.unit_type]].get("upgrade", None) is not None:
-                    # print("not upgraded and can be upgraded ", x, y)
                     costs = self.type_cost(existing_unit.unit_type, True)
                     resources = self.get_resources(player_index=player_idx)
                     if resources[SP] >= costs[SP] and resources[MP] >= costs[MP]:
-                        # print("can afford upgrade cost ", x, y)
                         self.__set_resource(SP, 0 - costs[SP], player_index=player_idx)
                         self.__set_resource(MP, 0 - costs[MP], player_index=player_idx)
                         existing_unit.upgrade()

@@ -59,7 +59,6 @@ class GameUnit:
         self.shieldPerUnit = type_config.get("shieldPerUnit", 0)
         self.cost = [type_config.get("cost1", 0), type_config.get("cost2", 0)]
 
-
     def upgrade(self):
         from .game_state import UNIT_TYPE_TO_INDEX
         type_config = self.config["unitInformation"][UNIT_TYPE_TO_INDEX[self.unit_type]].get("upgrade", {})
@@ -75,6 +74,8 @@ class GameUnit:
         self.cost = [type_config.get("cost1", 0) + self.cost[0], type_config.get("cost2", 0) + self.cost[1]]
         self.upgraded = True
 
+    def set_pending_removal(self):
+        self.pending_removal = True
 
     def __toString(self):
         owner = "Friendly" if self.player_index == 0 else "Enemy"

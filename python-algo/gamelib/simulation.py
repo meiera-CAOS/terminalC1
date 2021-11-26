@@ -1,8 +1,19 @@
 from .game_state import GameState
 from .unit import GameUnit
-# from
+from .helper_functions import get_structures
 # from game_map
 # from util
+
+
+def manage_pending_removal(game_obj, structure, player_idx):
+    refund_val = 0
+    if structure.pending_removal:
+        loc = [structure.x, structure.y]
+        refund_val += refund(game_obj, loc, player_idx=player_idx)  # refund to player
+        game_obj.game_map.remove_unit(loc)  # remove from game map
+        return refund_val
+    else:
+        return 0
 
 
 def refund(game_obj, locations, player_idx=0):  # return refunded resource
@@ -25,8 +36,9 @@ def refund(game_obj, locations, player_idx=0):  # return refunded resource
             # select game unit at location
             curr_unit = game_obj.contains_stationary_unit(location)
             # detect it's health ratio
+            if curr_unit.unit_type == 0:
+                print("WALL HEALTH: ", curr_unit.health, curr_unit.max_health)
             structure_value = round(curr_unit.cost[0] * (curr_unit.health / curr_unit.max_health) * 0.75, 1)
-            print("structure cost of curr unit = ", curr_unit.cost[0], curr_unit, structure_value)
             refund_sum = round(refund_sum + structure_value, 1)
         else:
             game_obj.warn("Could not refund a unit from {}. Location has no structures or is enemy territory.".format(location))
@@ -51,9 +63,17 @@ def simulate(game_obj):
     3) Units that were reduced below 0 health are removed
     """
 
-    # TODO: at end of round, remove deleted structures and give the corresponding player refund.
-    # for standing structures, for each player refund structures marked as remove and remove from gamestate
+    print("resources p_0: ", game_obj.get_resources(player_index=0))
 
+    # for standing structures, for each player refund structures marked as pending_remove and remove from game_map
+    structures = get_structures(game_obj)
+    structures_p0 = structures[0]
+    structures_p1 = structures[1]
+    refund_p0, refund_p1 = 0, 0
+    for structure in structures_p0:
+        refund_p0 = round(refund_p0 + manage_pending_removal(game_obj, structure, player_idx=0), 1)
+    for structure in structures_p1:
+        refund_p1 = round(refund_p1 + manage_pending_removal(game_obj, structure, player_idx=1), 1)
 
     # add MP = 1 resources
     curr_mp_0 = game_obj.get_resource(resource_type=1, player_index=0)
@@ -65,8 +85,8 @@ def simulate(game_obj):
     # add SP = 0 resources
     curr_sp_0 = game_obj.get_resource(resource_type=0, player_index=0)
     curr_sp_1 = game_obj.get_resource(resource_type=0, player_index=1)
-    game_obj.set_resource(resource_type=0, amount=(curr_sp_0 + 5 + life_lost_p1), player_index=0)
-    game_obj.set_resource(resource_type=0, amount=(curr_sp_1 + 5 + life_lost_p0), player_index=1)
+    game_obj.set_resource(resource_type=0, amount=(curr_sp_0 + 5 + life_lost_p1 + refund_p0), player_index=0)
+    game_obj.set_resource(resource_type=0, amount=(curr_sp_1 + 5 + life_lost_p0 + refund_p1), player_index=1)
     return game_obj
 
 

@@ -243,7 +243,6 @@ class Test(TestCase):
     def test_simulation_structure_deletion(self):
         # simulate next game state when structures get deleted.
         game = self.make_turn_0_map_europe_fall_2021()
-        print("initial resources", game.get_resource(SP, 0))
         # set structures
         p0_sp_cost, p1_sp_cost, p_0_refund, p_1_refund = 0, 0, 0, 0
 
@@ -252,20 +251,17 @@ class Test(TestCase):
         game.attempt_spawn(TURRET, turret_locations_p0, player_idx=0)
         p0_sp_cost += 4*6  # cost of 4 turrets
         wall_locations_p0 = [[9, 13], [10, 13], [11, 13], [16, 13], [17, 13], [18, 13]]
-        num_walls = game.attempt_spawn(WALL, wall_locations_p0, player_idx=0)
-        print("spawned walls", num_walls)
+        game.attempt_spawn(WALL, wall_locations_p0, player_idx=0)
         p0_sp_cost += 6*0.5  # cost of 6 walls
+        assert(not game.contains_stationary_unit([9,13]).pending_removal)
 
         # upgrade structures p0
         upgrade_locations_p0 = [[8, 11], [9, 13], [10, 13], [11, 13], [16, 13]]
-        print(game.get_resource(SP, 0))
         num_upgrades = game.attempt_upgrade(upgrade_locations_p0, player_idx=0)
-        print(num_upgrades)
         # check the 6 locations are upgraded
         for loc in upgrade_locations_p0:
-            print(loc)
             assert game.contains_stationary_unit(loc).upgraded
-        p0_sp_cost += 2*6 + 4*1.5  # cost to upgrade 2 turrets and 4 walls
+        p0_sp_cost += 1*6 + 4*1.5  # cost to upgrade 2 turrets and 4 walls
 
         # refund structures p0
         game.attempt_remove([[8, 11], [0, 13], [9, 13], [10, 13], [17, 13], [18, 13]], player_idx=0)
@@ -276,7 +272,6 @@ class Test(TestCase):
         # refund of 9 + 4.5 + 2*1.5 + 2*0.4 = 17.3
         self.assertEqual(p_0_refund, 17.3, "p_0 refund calculation")
 
-        # print("resources p1", game.get_resources(1)) 40, 5
         # add structures p1
         support_locations_p1 = [[12, 20], [13, 20], [12, 19], [13, 19]]
         game.attempt_spawn(SUPPORT, support_locations_p1, player_idx=1)
@@ -300,6 +295,7 @@ class Test(TestCase):
 
         # upgrade structure
         game.attempt_upgrade([[12, 20], [13, 20]], player_idx=1)
+        assert game.contains_stationary_unit([12, 20]).upgraded
         p1_sp_cost += 2*2
 
         # mark structures to be deleted
@@ -308,27 +304,27 @@ class Test(TestCase):
         p_1_refund += simulation.refund(game, [[12, 20], [13, 20], [12, 19], [13, 19]], player_idx=1)
         # refund of (2.25 gets rounded down - statistical rounding): 2.2 + 1.5 + 1.2 + 0.5 = 5.4
         self.assertEqual(p_1_refund, 5.4, "p_1 refund calculation")
-
+        assert game.contains_stationary_unit([12, 20]).pending_removal
         # simulate
         sim_game_state = simulation.simulate(game)
 
         # assert correct new resource values (initial values 40 + turn + refund)
-        self.assertEqual(sim_game_state.get_resource(resource_type=SP, player_index=0),
-                         40 - p0_sp_cost + 5 + p_0_refund, "SP resource p0")
-        self.assertEqual(sim_game_state.get_resource(resource_type=SP, player_index=1),
-                         40 - p1_sp_cost + 5 + p_1_refund, "SP resource p1")
+        self.assertEqual(40 - p0_sp_cost + 5 + p_0_refund,
+                         sim_game_state.get_resource(resource_type=SP, player_index=0), "SP resource p0")
+        self.assertEqual(40 - p1_sp_cost + 5 + p_1_refund,
+                         sim_game_state.get_resource(resource_type=SP, player_index=1), "SP resource p1")
         self.assertEqual(sim_game_state.my_health, sim_game_state.enemy_health, 30)
 
         # assert not deleted structure at correct location
         remaining_turrets_pos = [[27, 13], [19, 11]]
         remaining_walls_pos = [[11, 13], [16, 13]]
         for tur in remaining_turrets_pos:
-            self.assertEqual(sim_game_state.contains_stationary_unit(tur), TURRET)
+            self.assertEqual(sim_game_state.contains_stationary_unit(tur).unit_type, TURRET)
         for wal in remaining_walls_pos:
-            self.assertEqual(sim_game_state.contains_stationary_unit(wal), WALL)
+            self.assertEqual(sim_game_state.contains_stationary_unit(wal).unit_type, WALL)
         # assert deleted structures map empty
         newly_vacant_pos = [[8, 11], [0, 13], [9, 13], [10, 13], [17, 13],
                             [18, 13], [12, 20], [13, 20], [12, 19], [13, 19]]
         for vac in newly_vacant_pos:
-            assert(not sim_game_state.contains_stationary_unit(tur))
+            assert(not sim_game_state.contains_stationary_unit(vac))
 
