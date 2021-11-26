@@ -30,6 +30,9 @@ class GameUnit:
         * shieldPerUnit (float): how much shield is given per unit
         * pending_removal (boolean): If this unit is marked for removal by its owner
         * upgraded (boolean): If this unit is upgraded
+        * path: The current pathing.
+        * scores_next_frame (boolean): Flag if the unit reached boarder and is about to score (if it's alive at begin of next frame)
+        * self_destruct_next_frame (boolean): Flag if the unit reached dead end and is about to self_destruct (if it's alive at begin of next frame)
 
     """
     def __init__(self, unit_type, config, player_index=None, health=None, x=-1, y=-1):
@@ -45,6 +48,9 @@ class GameUnit:
         self.y = y
         self.__serialize_type()
         self.health = self.max_health if not health else health
+        self.path = [[self.x, self.y]]
+        self.scores_next_frame = False
+        self.self_destruct_next_frame = False
 
     def __serialize_type(self):
         from .game_state import STRUCTURE_TYPES, UNIT_TYPE_TO_INDEX, SUPPORT

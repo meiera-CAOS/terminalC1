@@ -148,6 +148,29 @@ class GameMap:
             y = num
             bottom_right.append([int(x), int(y)])
         return [top_right, top_left, bottom_left, bottom_right]
+
+    def get_all_edges(self):
+        top_right = []
+        for num in range(0, self.HALF_ARENA):
+            x = self.HALF_ARENA + num
+            y = self.ARENA_SIZE - 1 - num
+            top_right.append([int(x), int(y)])
+        top_left = []
+        for num in range(0, self.HALF_ARENA):
+            x = self.HALF_ARENA - 1 - num
+            y = self.ARENA_SIZE - 1 - num
+            top_left.append([int(x), int(y)])
+        bottom_left = []
+        for num in range(0, self.HALF_ARENA):
+            x = self.HALF_ARENA - 1 - num
+            y = num
+            bottom_left.append([int(x), int(y)])
+        bottom_right = []
+        for num in range(0, self.HALF_ARENA):
+            x = self.HALF_ARENA + num
+            y = num
+            bottom_right.append([int(x), int(y)])
+        return # todo union of lists.
     
     def add_unit(self, unit_type, location, player_index=0):
         """Add a single GameUnit to the map at the given location.

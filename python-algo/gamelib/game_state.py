@@ -588,7 +588,9 @@ class GameState:
 
         for location in possible_locations:
             for unit in self.game_map[location]:
-                if unit.player_index == attacking_unit.player_index or (attacking_unit.damage_f == 0 and is_stationary(unit.unit_type)) or (attacking_unit.damage_i == 0 and not(is_stationary(unit.unit_type))):
+                if unit.player_index == attacking_unit.player_index or \
+                        (attacking_unit.damage_f == 0 and is_stationary(unit.unit_type)) or \
+                        (attacking_unit.damage_i == 0 and not(is_stationary(unit.unit_type))):
                     continue
 
                 new_target = False
@@ -662,9 +664,10 @@ class GameState:
         for unit in self.config["unitInformation"]:
             if unit.get('attackRange', 0) >= max_range:
                 max_range = unit.get('attackRange', 0)
-        possible_locations= self.game_map.get_locations_in_range(location, max_range)
+        possible_locations = self.game_map.get_locations_in_range(location, max_range)
         for location_unit in possible_locations:
             for unit in self.game_map[location_unit]:
-                if unit.damage_i + unit.damage_f > 0 and unit.player_index != player_index and self.game_map.distance_between_locations(location, location_unit) <= unit.attackRange:
+                if unit.damage_i + unit.damage_f > 0 and unit.player_index != player_index and \
+                        self.game_map.distance_between_locations(location, location_unit) <= unit.attackRange:
                     attackers.append(unit)
         return attackers

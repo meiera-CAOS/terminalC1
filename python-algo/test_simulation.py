@@ -2,6 +2,7 @@ from unittest import TestCase
 import json
 from .gamelib import game_state
 from .gamelib import simulation
+from .gamelib import helper_functions
 from .gamelib import unit
 
 class Test(TestCase):
@@ -328,3 +329,50 @@ class Test(TestCase):
         for vac in newly_vacant_pos:
             assert(not sim_game_state.contains_stationary_unit(vac))
 
+    def test_simulation_first_mobile_unit(self):
+        # spawn two and one mobile units that runs across the field unimpeded and deal damage to the opposing player
+        game = self.make_turn_0_map_europe_fall_2021()
+        game.attempt_spawn(SCOUT, [0, 13], player_idx=0)
+        game.attempt_spawn(INTERCEPTOR, [0, 13], player_idx=0)
+        game.attempt_spawn(DEMOLISHER, [27, 14], player_idx=1)
+        units = helper_functions.get_mobile_units(game)
+        print(units)
+        sim_game_state = simulation.simulate(game)
+
+        # test MP values
+        self.assertEqual(game.get_resources(player_index=0), [47, 7.3])
+        self.assertEqual(game.get_resources(player_index=0), [46, 6.5])
+
+        # test HP total
+        self.assertEqual(game.my_health, 29, "assert own life total")
+        self.assertEqual(game.enemy_health, 28, "assert enemy life total")
+
+        # ensure no mobile units in state
+        assert(not helper_functions.get_mobile_units(sim_game_state))
+
+    def test_simulation_mobile_unit_vs_tower(self):
+        # spawn multiple mobile units that runs into a turret,
+        # balance such that the turret and all but one mobile unit is destroyed
+        game = self.make_turn_0_map_europe_fall_2021()
+        assert False
+
+    def test_mobile_unit_speed(self):
+        # figure out a way to ensure that units move at appropriate speed.
+
+    def test_simulation_intercepting_mobile_units(self):
+        # spawn mobile units that runs into each other and fight
+        game = self.make_turn_0_map_europe_fall_2021()
+        assert False
+
+    def test_simulation_self_destruct_mobile_units(self):
+        # spawn mobile units that run trigger self destruction
+        game = self.make_turn_0_map_europe_fall_2021()
+        assert False
+
+    def test_simulation_shields(self):
+        # spawn support structures and shields and ensure they affect units in range
+        # (only once) and that they provide the right amount of shield (which interacts with damage as intended)
+        game = self.make_turn_0_map_europe_fall_2021()
+        assert False
+
+    # todo: read rules again and check for forgotten feature of simulation.
