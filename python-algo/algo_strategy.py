@@ -1,3 +1,5 @@
+import itertools
+
 import gamelib
 import random
 import math
@@ -85,7 +87,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.stall_with_interceptors(game_state)
         else:
             ### Steven ###
-            score = self.get_score(game_state)
+            score0 = self.get_score(game_state, player_id=self.PLAYER0)
+            score1 = self.get_score(game_state, player_id=self.PLAYER1)
+            score = score0 - score1
 
 
             # Now let's analyze the enemy base to see where their defenses are concentrated.
@@ -245,52 +249,69 @@ class AlgoStrategy(gamelib.AlgoCore):
         :return:           Returns a dict where key is the player id and values their current structures on the game map
         """
         game_map = game_state.game_map._GameMap__map  # list of list, cf. game_map __empty_grid function
-        # type(game_map): <class 'list'>
-        # len(game_map): 28
-        #
-        # type(game_map[0]): <class 'list'>
-        # len(game_map[0]): 28
-        # print('#' * 10 + ' algo_strategy line 246, type(game_map): {}, len(game_map): {}, game_map: {}'.format(type(game_map), len(game_map), game_map))
-        # print('#' * 10 + ' algo_strategy line 247, type(game_map[0]): {}, len(game_map[0]): {}, game_map[0]: {}'.format(type(game_map[0]), len(game_map[0]), game_map[0]))
-
         # 0 = us
         # 1 = adversary
         structures = {0: [], 1: []}
         for x, x_item in enumerate(game_map):
-            for y, y_item in enumerate(x_item):
-                if y_item:
+            for y, unit in enumerate(x_item):
+                if unit:
                     # y_item is a unit
-                    #
-                    # type(y_item): <class 'list'>
-                    # len(y_item): 1
-                    # print('#' * 10 + ' algo_strategy line 261, x: {}, y: {}, type(y_item): {}, y_item[0].player_index: {}, y_item[0].unit_type: {}, y_item[0].health, y_item[0].location: {}, y_item[0].pending_removal: {}, y_item[0].upgrade: {}'.format(x, y, type(y_item), y_item[0].player_index, y_item[0].unit_type, y_item[0].health, [y_item[0].x, y_item[0].y], y_item[0].pending_removal, y_item[0].upgrade))
-
-                    if y_item[0].player_index == self.PLAYER0:
-                        structures[self.PLAYER0].append(y_item[0])
+                    if unit[0].player_index == self.PLAYER0:
+                        structures[self.PLAYER0].append(unit[0])
                     else:
-                        structures[self.PLAYER1].append(y_item[0])
+                        structures[self.PLAYER1].append(unit[0])
 
         return structures
 
-    def get_score(self, game_state):
-        current_game_map = game_state.game_map
-        # TODO: - get value of the placed structure including their upgrade status & unit.health
-        #       - structure_score = unit.health / unit.max_health * unit.cost[0]; MP=1, SP=0
+    def get_score(self, game_state, player_id=self.PLAYER0, weights=None):
+        """
+        Computes score of player_id
+        :param game_state: Current game state
+        :param player_id:  Player ID who's score we want to compute (defaults to player 0)
+        :param weights:    Weight of the score components (defaults to weighting hp double)
+        :return:           Returns a score that is a linear combination of health points (hp),
+                           structure points (sp), mobile points (mp), and structure_score based
+                           on what structure, incl. their health, is currently on the game map
+        """
+        if not weights:
+            alpha = 2.0
+            beta = 1.0
+            gamma = 1.0
+            delta = 1.0
+        else:
+            alpha, beta, gamma, delta = weights
+
         structures = self.get_structures(game_state)
-        player0_structures = structures[self.PLAYER0] # this is a list containing player0's current structures
+        if player_id == self.PLAYER0:
+            player0_structures = structures[self.PLAYER0] # this is a list containing player0's current structures
+        else:
+            player0_structures = structures[self.PLAYER1]
         structure_score = 0
         for structure_unit in player0_structures:
-            # print('#' * 10 + ' algo_strategy line 284, len(player0_structures): {}, type(structure_unit): {}, location: {}'.format(len(player0_structures), type(structure_unit), [structure_unit.x, structure_unit.y]))
-            # TODO: - make sure unit cost include the upgrade cost
-            #       - could also their damage into the score
             structure_score += structure_unit.health / structure_unit.max_health * structure_unit.cost[SP]
 
-        # print('#' * 10 + ' algo_strategy line 286, structure_score: {}'.format(structure_score))
-        hp = game_state.my_health
-        sp, mp = game_state.get_resources()
+        hp = game_state.my_health if player_id == self.PLAYER0 else game_state.enemy_health
+        sp, mp = game_state.get_resources(player_index=player_id)
+
         # TODO: - do we want to ceiling to the structure_score to ensure it doesn't focus only on structure building
-        score = hp - sp - mp + structure_score
+        score = alpha * hp + beta * sp + gamma * mp + delta * structure_score
         return score
+
+    def combination_generator(self, game_state):
+        # Assume we want to use up all available MP and SP
+        # TODO: - create all possible structure combination based on current game state
+        #       ---- compute all valid coordinations
+        #       ---- make it a constant that gets only computed once
+        #       ---- y < game_map.HALF_ARENA and startx <= x <= endx
+        #       - create all possible combination of starting points for the mobile units
+        #       ---- use game_map.get_edge_locations(quadrant_description=game_map.BOTTOM_LEFT)
+        #       ---- use game_map.get_edge_locations(quadrant_description=game_map.BOTTOM_RIGHT)
+        #       ---- make it a constant that gets only computed once
+        all_structures = self.get_structures(game_state)
+        structures = all_structures[self.PLAYER0]
+        # Assumptions: - restrict supports to Y < 8
+        coordinates_raw = list(itertools.product(range(game_state.HALF_ARENA), range(game_state.ARENA_SIZE)))
+        return
 
 
 if __name__ == "__main__":
