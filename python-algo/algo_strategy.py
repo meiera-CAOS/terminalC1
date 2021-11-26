@@ -87,8 +87,8 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.stall_with_interceptors(game_state)
         else:
             ### Steven ###
-            score0 = self.get_score(game_state, player_id=self.PLAYER0)
-            score1 = self.get_score(game_state, player_id=self.PLAYER1)
+            score0 = gamelib.get_score(game_state, player_id=self.PLAYER0)
+            score1 = gamelib.get_score(game_state, player_id=self.PLAYER1)
             score = score0 - score1
 
 
