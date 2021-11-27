@@ -1,9 +1,8 @@
 from unittest import TestCase
 import json
-from .gamelib import game_state
-from .gamelib import simulation
-from .gamelib import helper_functions
-from .gamelib import unit
+from gamelib import simulation
+from gamelib import helper_functions
+from gamelib import game_state
 
 class Test(TestCase):
 
@@ -329,6 +328,18 @@ class Test(TestCase):
         for vac in newly_vacant_pos:
             assert(not sim_game_state.contains_stationary_unit(vac))
 
+    def test_get_mobile_units(self):
+        # spawn mobile units and a structure and ensure you get a list of the mobile units.
+        game = self.make_turn_0_map_europe_fall_2021()
+        game.attempt_spawn(SCOUT, [0, 13], num=3, player_idx=0)
+        game.attempt_spawn(INTERCEPTOR, [0, 13], player_idx=0)
+        game.attempt_spawn(DEMOLISHER, [27, 14], player_idx=1)
+        support_locations_p1 = [[12, 20], [13, 20], [12, 19], [13, 19]]
+        game.attempt_spawn(SUPPORT, support_locations_p1, player_idx=1)
+        mobile_units = helper_functions.get_mobile_units(game)
+        self.assertEqual(len(mobile_units[0]), 4)
+        self.assertEqual(len(mobile_units[1]), 1)
+
     def test_simulation_first_mobile_unit(self):
         # spawn two and one mobile units that runs across the field unimpeded and deal damage to the opposing player
         game = self.make_turn_0_map_europe_fall_2021()
@@ -358,6 +369,7 @@ class Test(TestCase):
 
     def test_mobile_unit_speed(self):
         # figure out a way to ensure that units move at appropriate speed.
+        assert False
 
     def test_simulation_intercepting_mobile_units(self):
         # spawn mobile units that runs into each other and fight

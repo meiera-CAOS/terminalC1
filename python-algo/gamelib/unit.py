@@ -32,8 +32,7 @@ class GameUnit:
         * upgraded (boolean): If this unit is upgraded
         * path: The current pathing.
         * scores_next_frame (boolean): Flag if the unit reached boarder and is about to score (if it's alive at begin of next frame)
-        * self_destruct_next_frame (boolean): Flag if the unit reached dead end and is about to self_destruct (if it's alive at begin of next frame)
-
+        * self_destruct_flag (int): 0: not self desctructing, 1: selfdestruct next frame, 2: deal self destruct damage this frame
     """
     def __init__(self, unit_type, config, player_index=None, health=None, x=-1, y=-1):
         """ Initialize unit variables using args passed
@@ -50,7 +49,7 @@ class GameUnit:
         self.health = self.max_health if not health else health
         self.path = [[self.x, self.y]]
         self.scores_next_frame = False
-        self.self_destruct_next_frame = False
+        self.self_destruct_flag = 0
 
     def __serialize_type(self):
         from .game_state import STRUCTURE_TYPES, UNIT_TYPE_TO_INDEX, SUPPORT

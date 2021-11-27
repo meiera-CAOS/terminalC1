@@ -1,6 +1,7 @@
 import math
-from .unit import GameUnit
-from .util import debug_write
+from gamelib import unit
+from gamelib import util
+from gamelib import game_state
 
 class GameMap:
     """Holds data about the current game map and provides functions
@@ -149,28 +150,15 @@ class GameMap:
             bottom_right.append([int(x), int(y)])
         return [top_right, top_left, bottom_left, bottom_right]
 
-    def get_all_edges(self):
-        top_right = []
-        for num in range(0, self.HALF_ARENA):
-            x = self.HALF_ARENA + num
-            y = self.ARENA_SIZE - 1 - num
-            top_right.append([int(x), int(y)])
-        top_left = []
-        for num in range(0, self.HALF_ARENA):
-            x = self.HALF_ARENA - 1 - num
-            y = self.ARENA_SIZE - 1 - num
-            top_left.append([int(x), int(y)])
-        bottom_left = []
-        for num in range(0, self.HALF_ARENA):
-            x = self.HALF_ARENA - 1 - num
-            y = num
-            bottom_left.append([int(x), int(y)])
-        bottom_right = []
-        for num in range(0, self.HALF_ARENA):
-            x = self.HALF_ARENA + num
-            y = num
-            bottom_right.append([int(x), int(y)])
-        return # todo union of lists.
+    @staticmethod
+    def get_all_edges():
+        edges = [[14, 27], [15, 26], [16, 25], [17, 24], [18, 23], [19, 22], [20, 21], [21, 20], [22, 19], [23, 18],
+                 [24, 17], [25, 16], [26, 15], [27, 14], [13, 27], [12, 26], [11, 25], [10, 24], [9, 23], [8, 22],
+                 [7, 21], [6, 20], [5, 19], [4, 18], [3, 17], [2, 16], [1, 15], [0, 14], [13, 0], [12, 1], [11, 2],
+                 [10, 3], [9, 4], [8, 5], [7, 6], [6, 7], [5, 8], [4, 9], [3, 10], [2, 11], [1, 12], [0, 13], [14, 0],
+                 [15, 1], [16, 2], [17, 3], [18, 4], [19, 5], [20, 6], [21, 7], [22, 8], [23, 9], [24, 10], [25, 11],
+                 [26, 12], [27, 13]]
+        return edges
     
     def add_unit(self, unit_type, location, player_index=0):
         """Add a single GameUnit to the map at the given location.
@@ -190,11 +178,39 @@ class GameMap:
             self.warn("Player index {} is invalid. Player index should be 0 or 1.".format(player_index))
 
         x, y = location
-        new_unit = GameUnit(unit_type, self.config, player_index, None, location[0], location[1])
+        new_unit = unit.GameUnit(unit_type, self.config, player_index, None, location[0], location[1])
         if not new_unit.stationary:
             self.__map[x][y].append(new_unit)
         else:
             self.__map[x][y] = [new_unit]
+
+    def remove_mobile_unit(self, unit):
+        """Remove one units on the map in the given location.
+
+        Args:
+            unit: The unit to remove
+
+        This function does not affect your turn and only changes the data stored in GameMap. The intended use of this function
+        is to allow you to create arbitrary gamestates. Using this function on the GameMap inside game_state can cause your algo to crash.
+        """
+        if game_state.is_stationary(unit):  # should only be used for non stationary units
+            return
+        location = [unit.x, unit.y]
+        if not self.in_arena_bounds(location):
+            self._invalid_coordinates(location)
+        x, y = location
+        found = False
+        for units in self.__map[x][y]:
+            idx = 0
+            for unit_ in units:
+                ''' if (unit_.unit_type == unit.unit_type and unit_.upgraded == unit.upgraded
+                    and unit_.healt == unit.health and unit_.shieldPerUnit == unit.shieldPerUnit
+                    and unit_.player_index == unit.player_index):'''
+                if unit.__to_string() == unit_.__to_string():
+                    found = True
+                    units.pop(idx)  # TODO: check if this removes unit?!
+                    idx += 1
+        return found
 
     def remove_unit(self, location):
         """Remove all units on the map in the given location.
@@ -260,4 +276,4 @@ class GameMap:
         Used internally by game_map to print out default messaging
         """
         if(self.enable_warnings):
-            debug_write(message)
+            util.debug_write(message)
