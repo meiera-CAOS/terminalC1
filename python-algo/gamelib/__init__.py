@@ -25,5 +25,5 @@ from gamelib import game_state
 from gamelib import unit
 from gamelib import game_map
 
-__all__ = ["algocore", "game_state", "game_map", "navigation", "unit", "util"]
+__all__ = ["algocore", "game_state", "game_map", "navigation", "unit", "util", "helper_functions"]
  

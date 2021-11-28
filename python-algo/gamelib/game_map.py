@@ -178,10 +178,15 @@ class GameMap:
             self.warn("Player index {} is invalid. Player index should be 0 or 1.".format(player_index))
 
         x, y = location
+<<<<<<< Updated upstream
         new_unit = unit.GameUnit(unit_type, self.config, player_index, None, location[0], location[1])
         if not new_unit.stationary:
+=======
+        new_unit = GameUnit(unit_type, self.config, player_index, None, location[0], location[1])
+        if not new_unit.stationary: # mobile units
+>>>>>>> Stashed changes
             self.__map[x][y].append(new_unit)
-        else:
+        else: # structure units
             self.__map[x][y] = [new_unit]
 
     def remove_mobile_unit(self, unit):
