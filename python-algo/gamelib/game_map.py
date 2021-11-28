@@ -261,7 +261,7 @@ class GameMap:
                     locations.append(new_location)
         return locations
 
-    def get_units_in_range(self, location, range, player_idx=-1):
+    def get_units_in_range(self, location, radius, player_idx=-1):
         """Gets all units in a circular area around a location
 
         Args:
@@ -273,7 +273,7 @@ class GameMap:
             List of units that are within our search area corresponding to player_idx
         """
         units_in_range = []
-        loc_in_range = self.get_locations_in_range(location, range)
+        loc_in_range = self.get_locations_in_range(location, radius)
         for loc in loc_in_range:
             x, y = loc
             if player_idx == -1:

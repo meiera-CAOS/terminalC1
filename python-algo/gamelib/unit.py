@@ -49,6 +49,7 @@ class GameUnit:
         self.__serialize_type()
         self.health = self.max_health if not health else health
         self.path = [[self.x, self.y]]
+        self.shieldsFrom = []
         self.scores_next_frame = False
         self.self_destruct_flag = 0
 

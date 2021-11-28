@@ -372,7 +372,8 @@ class Test(TestCase):
         game.attempt_spawn(SCOUT, [21, 20], num=8, player_idx=1)
         sim_game = simulation.simulate(game)
         # assert HP of turret is correct. (barely survives: 36 = 8+7+6+5+4+3+2+1 attacks taken, 2dmg each, 3 hp)
-        self.assertEqual(sim_game.contains_stationary_unit([13, 13]).health, 3)
+        self.assertEqual(sim_game.contains_stationary_unit([13, 13]).health, 3)  # todo, fix this used to work!
+        # SOMEHOW 7/8 scouts survive and kill the tower..? sideeffect from other unit tests? got shields?
         # assert player HP is correct, no damage taken
         self.assertEqual(sim_game.my_health, 30, "assert own life total")
         self.assertEqual(sim_game.enemy_health, 30, "assert enemy life total")
@@ -381,7 +382,7 @@ class Test(TestCase):
 
         assert False
 
-    def test_simulation_mobile_units_vs_tower_and_wall(self):
+    '''def test_simulation_mobile_units_vs_tower_and_wall(self):
         # test targeting of attacking and defensive structure
         assert False
 
@@ -397,12 +398,35 @@ class Test(TestCase):
     def test_simulation_self_destruct_mobile_units(self):
         # spawn mobile units that run trigger self destruction
         game = self.make_turn_0_map_europe_fall_2021()
-        assert False
+        assert False'''
 
     def test_simulation_shields(self):
         # spawn support structures and shields and ensure they affect units in range
         # (only once) and that they provide the right amount of shield (which interacts with damage as intended)
         game = self.make_turn_0_map_europe_fall_2021()
-        assert False
+        # two upgraded shields at y = 13 + one upgraded at y = 6 -> turret needs two hits
+        game.attempt_spawn(TURRET, [15, 14], player_idx=1)
+        support_locations = [[11, 13], [12, 13], [11, 6]]
+        game.attempt_spawn(SUPPORT, support_locations, player_idx=0)
+        game.attempt_upgrade(support_locations, player_idx=0)
+        game.attempt_spawn(SCOUT, [7, 6], num=5, player_idx=0)
+        sim_game = simulation.simulate(game)
+
+        # one scout dealt damage
+        # tower has (5*2 + 4*2 + 3*2 + 2*2 + 1) * 2 damage = 58, 75-58 = 17 < 75/4
+        self.assertEqual(sim_game.contains_stationary_unit([15, 14]).health, 17)  # todo, fix! why one hp?
+        self.assertEqual(sim_game.enemy_health, 29)
+
+        # two upgraded shields at y = 14 + one at y = 27-7 -> turret needs three hits
+        game = self.make_turn_0_map_europe_fall_2021()
+        game.attempt_spawn(TURRET, [11, 13], player_idx=0)
+        support_locations = [[16, 14], [17, 14], [17, 20]]
+        game.attempt_spawn(SUPPORT, support_locations, player_idx=1)
+        game.attempt_upgrade(support_locations, player_idx=1)
+        game.attempt_spawn(SCOUT, [21, 20], num=5, player_idx=1)
+        sim_game_2 = simulation.simulate(game)
+        # tower has (5*3 + 4*3 + 3*3) * 2 damage = 72,-> 3 hp
+        self.assertEqual(sim_game_2.contains_stationary_unit([11, 13]).health, 3)
+        self.assertEqual(sim_game_2.my_health, 28)
 
     # todo: read rules again and check for forgotten feature of simulation.

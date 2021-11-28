@@ -1,9 +1,9 @@
 import copy
 
 import helper_functions
-from .game_state import GameState, is_stationary
-from .unit import GameUnit
-from .helper_functions import get_structures, get_mobile_units, get_all_units, round_half_up
+from .game_state import is_stationary
+# from .unit import GameUnit
+from .helper_functions import get_structures, get_mobile_units, get_all_units, get_shield_units, round_half_up
 from .game_map import GameMap
 from .global_variables import DEBUG, STATIONARY_UNITS
 # from util
@@ -107,6 +107,55 @@ def advance_unit(game_obj, unit, frame):
     return 0
 
 
+def give_shield(game, supports_list, player_index=0):
+    """ checks for each support unit, looks for mobile units in range (
+    that have not yet received the buff from this unit) to shield
+
+    Args:
+        game: game state obj
+        supports_list: support units of one player
+        player_index: the corresponding player
+    """
+    for shield in supports_list:
+        if shield.upgraded:
+            radius = 7
+            if player_index == 0:
+                shield_bonus = shield.y
+            else:
+                shield_bonus = 27 - shield.y
+            shield_value = 2.0 + (0.34 * shield_bonus)
+        else:
+            radius = 3.5
+            shield_value = 2.0
+        friendly_units_in_range = game.game_map.get_units_in_range([shield.x, shield.y], radius, player_idx=player_index)
+        m_units_in_range = [x for x in friendly_units_in_range if x not in STATIONARY_UNITS]
+        for m_unit in m_units_in_range:
+            if [shield.x, shield.y] not in m_unit.shieldsFrom:  # check buff not already given
+                m_unit.shieldsFrom.append([shield.x, shield.y])
+                m_unit.health += shield_value
+    return
+
+
+def manage_shield(game, shield_units_dict):
+    """ checks for each support unit, looks for mobile units in range (
+    that have not yet received the buff from this unit) to shield
+
+    Args:
+        game: game state obj
+        shield_units_dict: support units [0]: p0, [1]: p1
+    """
+    mobile_units = get_mobile_units(game, both_players=False)
+    m_units_p0 = mobile_units[0]
+    m_units_p1 = mobile_units[1]
+    if not (m_units_p0 or m_units_p1):  # no mobile units
+        return
+    if m_units_p0:
+        give_shield(game, shield_units_dict[0], player_index=0)
+    if m_units_p1:
+        give_shield(game, shield_units_dict[1], player_index=1)
+    return
+
+
 def target(game, unit):
     """finds target of attack for unit
 
@@ -122,7 +171,7 @@ def target(game, unit):
     unit_loc = [unit.x, unit.y]
     # get all units within range
     enemy_units = game.game_map.get_units_in_range([unit.x, unit.y], unit.attackRange, enemy_player_index)
-    enemy_units = [x for x in enemy_units if x.health >= 0]  # remove all enemy_units with health below 0
+    enemy_units = [x for x in enemy_units if x.health >= 1]  # remove all enemy_units with health below 0
 
     # if mobile units in range, target mobile unit
     if not enemy_units:
@@ -162,7 +211,7 @@ def target(game, unit):
             elif n_unit.health == lowest_health:
                 lowest_health_units.append(n_unit)
         if DEBUG:
-            assert lowest_health >= 0  # as filtered out at start of this function
+            assert lowest_health >= 1  # as filtered out at start of this function
         if len(lowest_health_units) == 1:
             return lowest_health_units[0]
 
@@ -255,7 +304,7 @@ def clean_up(game_obj):
     for unit in all_units:
         '''if DEBUG and isinstance(unit, list):
             print("expected unit, got list: ", unit)'''
-        if unit.health < 0:
+        if unit.health < 1:
             if is_stationary(unit.unit_type):
                 removed_structure = True
                 GameMap.remove_unit(game_obj.game_map, [unit.x, unit.y])
@@ -288,13 +337,16 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
     """
     game = copy.deepcopy(game_obj)
     life_lost_p0, life_lost_p1 = 0, 0  # hits taken in this round of player 0 and opponent (p1).
+    frame = 0
 
     mobile_units = get_mobile_units(game, both_players=True)
-    frame = 0
+    shield_units_dict = get_shield_units(game, both_players=False)  # dict key = player_idx
+    manage_shield(game, shield_units_dict)
+
     if mobile_units:
         frame = 1
         for m_unit in mobile_units:  # calculate paths for mobile units
-            m_unit.path = GameState.find_path_to_edge(game, start_location=[m_unit.x, m_unit.y])[1:]  # exclude current pos from path.
+            m_unit.path = game.find_path_to_edge(start_location=[m_unit.x, m_unit.y])[1:]  # exclude current pos from path.
         # simulate frames
         while mobile_units:  # while mobile units are on the board
 
@@ -313,6 +365,9 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
                     else:  # unit.player_index == 1
                         life_lost_p0 += 1
 
+            # check for new shields to be given
+            manage_shield(game, shield_units_dict)
+
             atk_units = helper_functions.get_attacking_units(game, both_players=True)
             for unit in atk_units:  # assume order is correct ;)
                 attack(game, unit)  # decide on target, deal damage
@@ -322,7 +377,7 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
             mobile_units = get_mobile_units(game, both_players=True)  # update mobile units
             if removed_structure:
                 for m_unit in mobile_units:  # if structure was removed: recompute path of mobile units.
-                    m_unit.path = GameState.find_path_to_edge([m_unit.x, m_unit.y])[1:]
+                    m_unit.path = game.find_path_to_edge([m_unit.x, m_unit.y])[1:]
             frame += 1
 
     # use game_state.get_target to find target of units that can attack
