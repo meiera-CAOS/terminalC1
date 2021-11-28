@@ -185,10 +185,11 @@ class GameMap:
             self.__map[x][y] = [new_unit]
 
     def remove_mobile_unit(self, unit):
-        """Remove one units on the map in the given location.
-
+        """Remove given unit from the map
         Args:
             unit: The unit to remove
+        :returns:
+            boolean indicating if mobile unit was found and removed.
 
         This function does not affect your turn and only changes the data stored in GameMap. The intended use of this function
         is to allow you to create arbitrary gamestates. Using this function on the GameMap inside game_state can cause your algo to crash.

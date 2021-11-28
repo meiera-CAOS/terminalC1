@@ -70,8 +70,10 @@ def get_structures(game_state):
 
 def get_mobile_units(game_state, both_players=False):
     """
-    This goes through the current game_map and returns the mobile units that are currently on the game map
-    :param game_state: Current GameState object
+    This goes through the current gamget_mobile_unitse_map and returns the mobile units that are currently on the game map
+    :param
+        game_state: Current GameState object
+        both_players: Boolean, if True return a list of all mobile units, if false return a dict with player_id as keys
     :return:           Returns a dict where key is the player id and values their current structures on the game map
     """
     game_map = game_state.game_map._GameMap__map  # list of list, cf. game_map __empty_grid function
