@@ -1,5 +1,7 @@
 import json
 
+DEBUG = True
+
 string_config = """
             {
               "seasonCompatibilityModeP1": 5,

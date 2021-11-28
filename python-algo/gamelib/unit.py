@@ -86,8 +86,8 @@ class GameUnit:
 
     def __toString(self):
         owner = "Friendly" if self.player_index == 0 else "Enemy"
-        removal = ", pending removal" if self.pending_removal else ""
-        return "{} {}, health: {} location: {} removal: {} upgrade: {} ".format(owner, self.unit_type, self.health, [self.x, self.y], removal, self.upgraded)
+        # removal = ", pending removal" if self.pending_removal else ""
+        return "{} {}, health: {}, location: {}, removal: {}, upgrade: {} ".format(owner, self.unit_type, self.health, [self.x, self.y], self.pending_removal, self.upgraded)
 
     def __str__(self):
         return self.__toString()

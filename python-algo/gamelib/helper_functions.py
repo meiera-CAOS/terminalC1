@@ -4,6 +4,7 @@ from copy import deepcopy
 from .game_state import is_stationary
 import random
 import numpy as np
+import math
 
 
 '''
@@ -30,7 +31,12 @@ def get_attacking_units(game_state):
 '''
 
 
-def get_all_units(game_state):
+def round_half_up(n, decimals=0):
+    multiplier = 10 ** decimals
+    return math.floor(n*multiplier + 0.5) / multiplier
+
+
+def get_all_units(game_state, both_players=False):
     """
     This goes through the current game_map and returns the structures that are currently on the game map
     :param game_state: Current GameState object
@@ -39,15 +45,21 @@ def get_all_units(game_state):
     game_map = game_state.game_map._GameMap__map  # list of list, cf. game_map __empty_grid function
     # 0 = us
     # 1 = adversary
-    all_units = {0: [], 1: []}
+    if not both_players:
+        all_units = {0: [], 1: []}
+    else:
+        all_units = []
     for x, x_item in enumerate(game_map):
         for y, units in enumerate(x_item):
             if units:
                 for unit in units:
-                    if unit.player_index == 0:
-                        all_units[0].append(unit)
+                    if not both_players:
+                        if unit.player_index == 0:
+                            all_units[0].append(unit)
+                        else:
+                            all_units[1].append(unit)
                     else:
-                        all_units[1].append(unit)
+                        all_units.append(unit)
     return all_units
 
 

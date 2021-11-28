@@ -1,14 +1,13 @@
 from .game_state import GameState, is_stationary
 from .unit import GameUnit
-from .helper_functions import get_structures, get_mobile_units, get_all_units
+from .helper_functions import get_structures, get_mobile_units, get_all_units, round_half_up
 from .game_map import GameMap
+from .global_variables import DEBUG
 # from util
 
 import logging
 
 log = logging.getLogger(__name__)
-
-debug = True
 
 
 def manage_pending_removal(game_obj, structure, player_idx):
@@ -44,8 +43,8 @@ def refund(game_obj, locations, player_idx=0):  # return refunded resource
             # detect it's health ratio
             if curr_unit.unit_type == 0:
                 print("WALL HEALTH: ", curr_unit.health, curr_unit.max_health)
-            structure_value = round(curr_unit.cost[0] * (curr_unit.health / curr_unit.max_health) * 0.75, 1)
-            refund_sum = round(refund_sum + structure_value, 1)
+            structure_value = round_half_up(curr_unit.cost[0] * (curr_unit.health / curr_unit.max_health) * 0.75, decimals=1)
+            refund_sum = round_half_up(refund_sum + structure_value, decimals=1)
         else:
             game_obj.warn("Could not refund a unit from {}. Location has no structures or is enemy territory.".format(location))
     return refund_sum
@@ -61,7 +60,7 @@ def score_or_self_destruct(unit, frame):
     Returns:
         1 if the unit scored a damage to the opponent, 0 otherwise (sideffect of selfdestruction)
     """
-    if debug:  # check what flags are set (should be only one of either)
+    if DEBUG:  # check what flags are set (should be only one of either)
         assert((unit.self_destruct_flag and not unit.scores_next_frame) or
                (not unit.self_destruct_flag and unit.scores_next_frame))
     scores = 0
@@ -78,7 +77,7 @@ def score_or_self_destruct(unit, frame):
 #   the y value is relative for each player
 
 
-def advance_unit(unit, frame):
+def advance_unit(game_obj, unit, frame):
     """Performs the move of mobile unit, handles scoring and self destruct
 
     Args:
@@ -91,16 +90,16 @@ def advance_unit(unit, frame):
     if not unit.path:
         return score_or_self_destruct(unit, frame)
     new_pos = unit.path.pop(0)  # move unit one step along it's path
-    unit.x, unit.y = new_pos
+    if GameMap.move_unit_on_map(game_obj.game_map, unit=unit, new_location=new_pos):
+        unit.x, unit.y = new_pos  # set new position in unit attributes
     # if path is null after the move, check boarder: self_destruct or score on the next move!
-    if not unit.path:
+    if not unit.path:  # checks if this was the last step of the unit
         pos = [unit.x, unit.y]
         edges = GameMap.get_all_edges()
         if pos in edges:  # check if position on edge or self destruct
             unit.scores_next_frame = True  # if it survives this rounds attacks
         else:  # set corresponding flag
             unit.self_destruct_flag = 1  # if it survives this rounds attacks
-            # todo: ensure this causes sideffect in unit outside of function
     return 0
 
 
@@ -136,25 +135,27 @@ def clean_up(game_obj):
     Returns:
         Boolean indicating if a structure was removed
     """
-    # game_map = game_obj.game_map._GameMap__map  # TODO: game map?
     removed_structure = False
-    all_units = get_all_units(game_obj)
-    units_p0 = all_units[0]
-    units_p1 = all_units[1]
-    for unit in units_p0:
-        if unit.health < 0:
+    all_units = get_all_units(game_obj, both_players=True)
+    for unit in all_units:
+        if DEBUG and isinstance(unit, list):
+            print("expected unit, got list: ", unit)
+        if unit.health < 0:  # TODO: list has no health!
             if is_stationary(unit.unit_type):
                 removed_structure = True
                 GameMap.remove_unit(game_obj.game_map, [unit.x, unit.y])
-                if debug:  # check that structure is not in game state any longer
+                if DEBUG:  # check that structure is not in game state any longer
                     if game_obj.contains_stationary_unit([unit.x, unit.y]):
                         log.warning("clean_up, removing stationary unit from map did not remove it from game state.")
             else:
                 # remove mobile unit
-                removed_mobile_unit = GameMap.remove_mobile_unit(game_obj.game_map, unit)  # requires "self" game map obj.
+                removed_mobile_unit = GameMap.remove_mobile_unit(game_obj.game_map, unit)
+                if DEBUG:
+                    print("clean up: mobile unit to be removed: ", unit)
+                    print("removal success: ", removed_mobile_unit)
                 if not removed_mobile_unit:
-                    log.warning("clean_up, didn't find mobile unit to remove in game map.")
-                    if debug:
+                    log.warning("### clean_up, didn't find mobile unit to remove in game map.")
+                    if DEBUG:
                         assert False
     return removed_structure
 
@@ -185,15 +186,19 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
         # simulate frames
         frame = 0
         while mobile_units:  # while mobile units are on the board
+
+            if DEBUG:
+                print("Simulation frame: ", frame)
+
             for unit in mobile_units:  # 1) Each unit takes a step, if it is time for them to take a step.
                 scores = 0
                 if unit.unit_type == "SI":  # interceptor
                     # interceptor moves at 4th frame for the first time, every 4 frames
                     assert unit.speed == 0.25  # 4
                     if frame > 1 and frame % 4 == 0:
-                        scores = advance_unit(unit, frame)
+                        scores = advance_unit(game_obj, unit, frame)
                 else:
-                    scores = advance_unit(unit, frame)  # scout and demolisher move every frame,
+                    scores = advance_unit(game_obj, unit, frame)  # scout and demolisher move every frame,
                 if scores:
                     if unit.player_index == 0:
                         life_lost_p1 += 1
@@ -202,7 +207,6 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
 
             # for unit in attacking_units:  # ordered queue pointing to unit object?
                 # 2) All units attack. See ‘Targeting’ in advanced info
-
             removed_structure = clean_up(game_obj)  # 3) Units that were reduced below 0 health are removed
 
             mobile_units = get_mobile_units(game_obj, both_players=True)  # update mobile units
@@ -230,9 +234,9 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
     structures_p1 = structures[1]
     refund_p0, refund_p1 = 0, 0
     for structure in structures_p0:
-        refund_p0 = round(refund_p0 + manage_pending_removal(game_obj, structure, player_idx=0), 1)
+        refund_p0 = round_half_up(refund_p0 + manage_pending_removal(game_obj, structure, player_idx=0), 1)
     for structure in structures_p1:
-        refund_p1 = round(refund_p1 + manage_pending_removal(game_obj, structure, player_idx=1), 1)
+        refund_p1 = round_half_up(refund_p1 + manage_pending_removal(game_obj, structure, player_idx=1), 1)
 
     # add MP = 1 resources
     curr_mp_0 = game_obj.get_resource(resource_type=1, player_index=0)
@@ -250,7 +254,7 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
 
 # TODO: return log message if simulation predicted different outcome than observed in online play.
 # when running algo online, run simulation on effectively played turns (to verify).
-# if observed next state differs from simulated last state: util.debug_write('')
+# if observed next state differs from simulated last state: util.DEBUG_write('')
 #   store states in logfile
 
 

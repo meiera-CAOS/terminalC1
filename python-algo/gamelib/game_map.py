@@ -3,6 +3,7 @@ import math
 import game_state
 from unit import GameUnit
 from util import debug_write
+from global_variables import DEBUG
 
 class GameMap:
     """Holds data about the current game map and provides functions
@@ -195,23 +196,46 @@ class GameMap:
         This function does not affect your turn and only changes the data stored in GameMap. The intended use of this function
         is to allow you to create arbitrary gamestates. Using this function on the GameMap inside game_state can cause your algo to crash.
         """
-        if game_state.is_stationary(unit):  # should only be used for non stationary units
+        if game_state.is_stationary(unit):  # remove_mobile units function should only be used for non stationary units
             return
         location = [unit.x, unit.y]
         if not self.in_arena_bounds(location):
             self._invalid_coordinates(location)
         x, y = location
         found = False
+        u_idx = 0
         for units in self.__map[x][y]:
+            in_list = True
             idx = 0
+            if DEBUG:
+                print("remove_mobile_unit, looking for match of: ", unit, idx)
+            if isinstance(units, GameUnit):
+                in_list = False
+                units = [units]
             for unit_ in units:
-                ''' if (unit_.unit_type == unit.unit_type and unit_.upgraded == unit.upgraded
-                    and unit_.healt == unit.health and unit_.shieldPerUnit == unit.shieldPerUnit
-                    and unit_.player_index == unit.player_index):'''
-                if unit.__to_string() == unit_.__to_string():
+                if DEBUG:
+                    print("remove_mobile_unit, iterating through units: ", unit_, idx)
+                if str(unit) == str(unit_):
                     found = True
-                    units.pop(idx)  # TODO: check if this removes unit?!
+                    if DEBUG:
+                        pre_pop_len = len(units)
+                    if in_list:  # remove unit at position idx
+                        self.__map[x][y][u_idx].pop(idx)  # TODO: is that even removing something?
+                        # TOOD: does u_idx accomplish anyhthing?, Debug with breakpoint!
+                    else:  # remove list containing single unit
+                        self.__map[x][y] = []
+                        if DEBUG:
+                            assert idx == 0
+                    if DEBUG:
+                        if in_list:
+                            assert len(self.__map[x][y][u_idx]) == pre_pop_len - 1
+                        else:
+                            assert self.__map[x][y] == []
                     idx += 1
+                    return found
+                elif DEBUG:
+                    print("no match")
+            u_idx += 1
         return found
 
     def remove_unit(self, location):
@@ -256,6 +280,30 @@ class GameMap:
                 if self.in_arena_bounds(new_location) and self.distance_between_locations(location, new_location) < radius + getHitRadius:
                     locations.append(new_location)
         return locations
+
+    def move_unit_on_map(self, unit, new_location):
+        """moves mobile unit from current location [unit.x, unit.y] to new_location
+
+        Args:
+            unit: the unit to move
+            new_location: the location to move the unit to
+
+        Returns:
+            True if unit was successfully moved
+        """
+        could_move = False
+        if game_state.is_stationary(unit):
+            return could_move
+        new_x, new_y = new_location
+
+        if not self.in_arena_bounds(new_location):
+            self._invalid_coordinates(new_location)
+            return could_move
+
+        could_move = self.remove_mobile_unit(unit)
+        if could_move:  # remove unit at old location
+            self.__map[new_x][new_y].append(unit)  # add unit to new location
+        return could_move
 
     def distance_between_locations(self, location_1, location_2):
         """Euclidean distance
