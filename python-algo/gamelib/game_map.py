@@ -203,40 +203,20 @@ class GameMap:
             self._invalid_coordinates(location)
         x, y = location
         found = False
-        u_idx = 0
-        for units in self.__map[x][y]:
-            in_list = True
+        for unit_ in self.__map[x][y]:
+            # here map[x][y] should be a list of units.
             idx = 0
             if DEBUG:
-                print("remove_mobile_unit, looking for match of: ", unit, idx)
-            if isinstance(units, GameUnit):
-                in_list = False
-                units = [units]
-            for unit_ in units:
+                '''print("remove_mobile_unit, looking for match of: ", unit, idx)'''
+                assert isinstance(unit_, GameUnit)
+
+            if str(unit) == str(unit_):
+                found = True
+                removed_unit = self.__map[x][y].pop(idx)
                 if DEBUG:
-                    print("remove_mobile_unit, iterating through units: ", unit_, idx)
-                if str(unit) == str(unit_):
-                    found = True
-                    if DEBUG:
-                        pre_pop_len = len(units)
-                    if in_list:  # remove unit at position idx
-                        self.__map[x][y][u_idx].pop(idx)  # TODO: is that even removing something?
-                        # TOOD: does u_idx accomplish anyhthing?, Debug with breakpoint!
-                    else:  # remove list containing single unit
-                        self.__map[x][y] = []
-                        if DEBUG:
-                            assert idx == 0
-                    if DEBUG:
-                        if in_list:
-                            assert len(self.__map[x][y][u_idx]) == pre_pop_len - 1
-                        else:
-                            assert self.__map[x][y] == []
-                    idx += 1
-                    return found
-                elif DEBUG:
-                    print("no match")
-            u_idx += 1
-        return found
+                    assert str(unit) == str(removed_unit)
+                return found
+            return found
 
     def remove_unit(self, location):
         """Remove all units on the map in the given location.

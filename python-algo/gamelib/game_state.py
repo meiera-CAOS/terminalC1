@@ -7,6 +7,7 @@ from navigation import ShortestPathFinder
 from util import send_command, debug_write
 from unit import GameUnit
 from game_map import GameMap
+from helper_functions import round_half_up
 
 def is_stationary(unit_type):
     """
@@ -293,7 +294,8 @@ class GameState:
             MP_per_round_growth = self.config["resources"]["bitGrowthRate"]
             MP_gained = MP_per_round + (MP_per_round_growth * MP_ramp_ups)
             MP += MP_gained
-            MP = round(MP, 1)
+            # MP = round(MP, 1)
+            MP = round_half_up(MP, 1)
         return MP
 
     # for upgraded units only gives cost of the upgrade

@@ -304,8 +304,8 @@ class Test(TestCase):
         game.attempt_remove([[12, 20], [13, 20], [12, 19], [13, 19]], player_idx=1)
         # upgraded at 15 and 10 hp, normal at 12 and 5 hp.
         p_1_refund += simulation.refund(game, [[12, 20], [13, 20], [12, 19], [13, 19]], player_idx=1)
-        # refund of (2.25 gets rounded down - statistical rounding): 2.2 + 1.5 + 1.2 + 0.5 = 5.4
-        self.assertEqual(p_1_refund, 5.4, "p_1 refund calculation")
+        # refund of: 2.3 + 1.5 + 1.2 + 0.5 = 5.4
+        self.assertEqual(p_1_refund, 5.5, "p_1 refund calculation")
         assert game.contains_stationary_unit([12, 20]).pending_removal
         # simulate
         sim_game_state = simulation.simulate(game)
@@ -345,23 +345,23 @@ class Test(TestCase):
     def test_simulation_first_mobile_unit(self):
         # spawn two and one mobile units that runs across the field unimpeded and deal damage to the opposing player
         game = self.make_turn_0_map_europe_fall_2021()
-        game.attempt_spawn(SCOUT, [0, 13], player_idx=0)
-        game.attempt_spawn(INTERCEPTOR, [0, 13], player_idx=0)
-        game.attempt_spawn(DEMOLISHER, [27, 14], player_idx=1)
+        game.attempt_spawn(SCOUT, [0, 13], player_idx=0)  # PI
+        game.attempt_spawn(INTERCEPTOR, [0, 13], player_idx=0)  # SI
+        game.attempt_spawn(DEMOLISHER, [27, 14], player_idx=1)  # EI
         units = helper_functions.get_mobile_units(game)
         print(units)
         sim_game_state = simulation.simulate(game)
 
         # test MP values
-        # self.assertEqual(game.get_resources(player_index=0), [46, 7.3])  # TODO: check why 7.2 actual
-        self.assertEqual(game.get_resources(player_index=0), [47, 6.5])
+        self.assertEqual(game.get_resources(player_index=0), [47, 7.3])
+        self.assertEqual(game.get_resources(player_index=1), [46, 6.5])
 
         # test HP total
         self.assertEqual(game.my_health, 29, "assert own life total")
         self.assertEqual(game.enemy_health, 28, "assert enemy life total")
 
         # ensure no mobile units in state
-        assert(not helper_functions.get_mobile_units(sim_game_state))
+        assert(not helper_functions.get_mobile_units(sim_game_state, both_players=True))
 
     def test_simulation_mobile_unit_vs_tower(self):
         # spawn multiple mobile units that runs into a turret,

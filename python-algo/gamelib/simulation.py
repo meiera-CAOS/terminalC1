@@ -81,6 +81,7 @@ def advance_unit(game_obj, unit, frame):
     """Performs the move of mobile unit, handles scoring and self destruct
 
     Args:
+        game_obj: game state
         unit: the mobile unit
         frame: the turn of the round, (no self destruct damage < 5 to buildings).
 
@@ -137,9 +138,11 @@ def clean_up(game_obj):
     """
     removed_structure = False
     all_units = get_all_units(game_obj, both_players=True)
+    '''if DEBUG:
+        print("clean_up, number of units found to verify: ", len(all_units))'''
     for unit in all_units:
-        if DEBUG and isinstance(unit, list):
-            print("expected unit, got list: ", unit)
+        '''if DEBUG and isinstance(unit, list):
+            print("expected unit, got list: ", unit)'''
         if unit.health < 0:  # TODO: list has no health!
             if is_stationary(unit.unit_type):
                 removed_structure = True
@@ -151,8 +154,8 @@ def clean_up(game_obj):
                 # remove mobile unit
                 removed_mobile_unit = GameMap.remove_mobile_unit(game_obj.game_map, unit)
                 if DEBUG:
-                    print("clean up: mobile unit to be removed: ", unit)
-                    print("removal success: ", removed_mobile_unit)
+                    '''print("clean up: mobile unit to be removed: ", unit)
+                    print("removal success: ", removed_mobile_unit)'''
                 if not removed_mobile_unit:
                     log.warning("### clean_up, didn't find mobile unit to remove in game map.")
                     if DEBUG:
@@ -179,16 +182,14 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
     life_lost_p0, life_lost_p1 = 0, 0  # hits taken in this round of player 0 and opponent (p1).
 
     mobile_units = get_mobile_units(game_obj, both_players=True)
+    frame = 0
     if mobile_units:
+        frame =1
         # calculate paths for each unit and (?)store it in mobile_units dict
         for m_unit in mobile_units:
-            m_unit.path = GameState.find_path_to_edge(game_obj, start_location=[m_unit.x, m_unit.y])  # if final step is not an edge, it's a self destruct path
+            m_unit.path = GameState.find_path_to_edge(game_obj, start_location=[m_unit.x, m_unit.y])[1:]  # exclude current pos from path.
         # simulate frames
-        frame = 0
         while mobile_units:  # while mobile units are on the board
-
-            if DEBUG:
-                print("Simulation frame: ", frame)
 
             for unit in mobile_units:  # 1) Each unit takes a step, if it is time for them to take a step.
                 scores = 0
@@ -212,13 +213,15 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
             mobile_units = get_mobile_units(game_obj, both_players=True)  # update mobile units
             if removed_structure:
                 for m_unit in mobile_units:  # if structure was removed: recompute path of mobile units.
-                    m_unit.path = GameState.find_path_to_edge(m_unit.path[0])
+                    m_unit.path = GameState.find_path_to_edge([m_unit.x, m_unit.y])[1:]
             frame += 1
 
     # use game_state.get_target to find target of units that can attack
     # use game_state.get_attackers to find stationary units threatening a given location
     # use game_map.get_locations_in_range to find coordinates to check if there is an enemy unit in range to attack
     # use game_map.distance_between_locations
+    if DEBUG:
+        print("Simulation frame: ", frame)
 
     ### AT END OF ROUND: Remove pending_remove structures and refund, increase resources for next round
 

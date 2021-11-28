@@ -2,6 +2,8 @@ import json
 
 DEBUG = True
 
+STATIONARY_UNITS = ['FF', 'EF', 'DF']
+
 string_config = """
             {
               "seasonCompatibilityModeP1": 5,

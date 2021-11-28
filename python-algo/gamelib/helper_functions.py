@@ -1,7 +1,7 @@
 import itertools
 from copy import deepcopy
 
-from .game_state import is_stationary
+from global_variables import STATIONARY_UNITS
 import random
 import numpy as np
 import math
@@ -75,7 +75,7 @@ def get_structures(game_state):
     structures = {0: [], 1: []}
     for x, x_item in enumerate(game_map):
         for y, unit in enumerate(x_item):
-            if unit and is_stationary(unit[0].unit_type):
+            if unit and unit[0].unit_type in STATIONARY_UNITS:
                 # y_item is a structure
                 if unit[0].player_index == 0:
                     structures[0].append(unit[0])
@@ -117,7 +117,7 @@ def get_mobile_units(game_state, both_players=False):
         mobile_units = []
     for x, x_item in enumerate(game_map):
         for y, units in enumerate(x_item):
-            if units and not is_stationary(units[0].unit_type):
+            if units and not units[0].unit_type in STATIONARY_UNITS:
                 # y_item is a mobile unit or list of mobile units
                 for unit in units:
                     if not both_players:
