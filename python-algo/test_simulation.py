@@ -1,8 +1,9 @@
 from unittest import TestCase
 import json
-from gamelib import simulation
-from gamelib import helper_functions
-from gamelib import game_state
+from .gamelib import game_state
+from .gamelib import simulation
+from .gamelib import helper_functions
+from .gamelib import unit
 
 class Test(TestCase):
 

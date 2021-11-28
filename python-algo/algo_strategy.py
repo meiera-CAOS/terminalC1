@@ -7,6 +7,11 @@ import warnings
 from sys import maxsize
 import json
 
+from algocore import AlgoCore
+from game_state import GameState
+from gamelib import helper_functions
+from unit import GameUnit
+from util import debug_write
 
 """
 Most of the algo code you write will be in this file unless you create new
@@ -21,18 +26,18 @@ Advanced strategy tips:
   the actual current map state.
 """
 
-class AlgoStrategy(gamelib.AlgoCore):
+class AlgoStrategy(AlgoCore):
     def __init__(self):
         super().__init__()
         seed = random.randrange(maxsize)
         random.seed(seed)
-        gamelib.debug_write('Random seed: {}'.format(seed))
+        debug_write('Random seed: {}'.format(seed))
 
     def on_game_start(self, config):
         """ 
         Read in config and perform any initial setup here 
         """
-        gamelib.debug_write('Configuring your custom algo strategy...')
+        debug_write('Configuring your custom algo strategy...')
         self.config = config
         global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, MP, SP
         WALL = config["unitInformation"][0]["shorthand"]
@@ -44,9 +49,10 @@ class AlgoStrategy(gamelib.AlgoCore):
         MP = 1
         SP = 0
         # This is a good place to do initial setup
-        self.PLAYER0 = 0 # this is usu
-        self.PLAYER1 = 1 # this is our adversary to beat
         self.scored_on_locations = []
+        self.PLAYER0 = 0 # this is us
+        self.PLAYER1 = 1 # this is our adversary to beat
+        self.all_coordinates = []
 
     def on_turn(self, turn_state):
         """
@@ -56,10 +62,12 @@ class AlgoStrategy(gamelib.AlgoCore):
         unit deployments, and transmitting your intended deployments to the
         game engine.
         """
-        game_state = gamelib.GameState(self.config, turn_state)
-        gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
+        game_state = GameState(self.config, turn_state)
+        debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
 
+        # if not self.all_coordinates:
+        #     self.all_coordinates = gamelib.
         self.starter_strategy(game_state)
 
         game_state.submit_turn()
@@ -87,9 +95,13 @@ class AlgoStrategy(gamelib.AlgoCore):
             self.stall_with_interceptors(game_state)
         else:
             ### Steven ###
-            score0 = gamelib.get_score(game_state, player_id=self.PLAYER0)
-            score1 = gamelib.get_score(game_state, player_id=self.PLAYER1)
-            score = score0 - score1
+            # score0 = gamelib.get_score(game_state, player_id=self.PLAYER0)
+            # score1 = gamelib.get_score(game_state, player_id=self.PLAYER1)
+            # score = score0 - score1
+
+            # helper_functions.structure_build_combination_generator(game_state)
+            updated_game_states = helper_functions.combination_generator(game_state, no_samples=10, new_structure_budget_share=0.75, removal_pct=0.10)
+            # gamelib.helper_functions.
 
 
             # Now let's analyze the enemy base to see where their defenses are concentrated.
@@ -199,7 +211,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             damage = 0
             for path_location in path:
                 # Get number of enemy turrets that can attack each location and multiply by turret damage
-                damage += len(game_state.get_attackers(path_location, 0)) * gamelib.GameUnit(TURRET, game_state.config).damage_i
+                damage += len(game_state.get_attackers(path_location, 0)) * GameUnit(TURRET, game_state.config).damage_i
             damages.append(damage)
         
         # Now just return the location that takes the least damage
@@ -238,80 +250,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             # When parsing the frame data directly, 
             # 1 is integer for yourself, 2 is opponent (StarterKit code uses 0, 1 as player_index instead)
             if not unit_owner_self:
-                gamelib.debug_write("Got scored on at: {}".format(location))
+                debug_write("Got scored on at: {}".format(location))
                 self.scored_on_locations.append(location)
-                gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
-
-    # def get_structures(self, game_state):
-    #     """
-    #     This goes through the current game_map and returns the structures that are currently on the game map
-    #     :param game_state: Current GameState object
-    #     :return:           Returns a dict where key is the player id and values their current structures on the game map
-    #     """
-    #     game_map = game_state.game_map._GameMap__map  # list of list, cf. game_map __empty_grid function
-    #     # 0 = us
-    #     # 1 = adversary
-    #     structures = {0: [], 1: []}
-    #     for x, x_item in enumerate(game_map):
-    #         for y, unit in enumerate(x_item):
-    #             if unit:
-    #                 # y_item is a unit
-    #                 if unit[0].player_index == self.PLAYER0:
-    #                     structures[self.PLAYER0].append(unit[0])
-    #                 else:
-    #                     structures[self.PLAYER1].append(unit[0])
-    #
-    #     return structures
-    #
-    # def get_score(self, game_state, player_id=self.PLAYER0, weights=None):
-    #     """
-    #     Computes score of player_id
-    #     :param game_state: Current game state
-    #     :param player_id:  Player ID who's score we want to compute (defaults to player 0)
-    #     :param weights:    Weight of the score components (defaults to weighting hp double)
-    #     :return:           Returns a score that is a linear combination of health points (hp),
-    #                        structure points (sp), mobile points (mp), and structure_score based
-    #                        on what structure, incl. their health, is currently on the game map
-    #     """
-    #     if not weights:
-    #         alpha = 2.0
-    #         beta = 1.0
-    #         gamma = 1.0
-    #         delta = 1.0
-    #     else:
-    #         alpha, beta, gamma, delta = weights
-    #
-    #     structures = self.get_structures(game_state)
-    #     if player_id == self.PLAYER0:
-    #         player0_structures = structures[self.PLAYER0] # this is a list containing player0's current structures
-    #     else:
-    #         player0_structures = structures[self.PLAYER1]
-    #     structure_score = 0
-    #     for structure_unit in player0_structures:
-    #         structure_score += structure_unit.health / structure_unit.max_health * structure_unit.cost[SP]
-    #
-    #     hp = game_state.my_health if player_id == self.PLAYER0 else game_state.enemy_health
-    #     sp, mp = game_state.get_resources(player_index=player_id)
-    #
-    #     # TODO: - do we want to ceiling to the structure_score to ensure it doesn't focus only on structure building
-    #     score = alpha * hp + beta * sp + gamma * mp + delta * structure_score
-    #     return score
-    #
-    # def combination_generator(self, game_state):
-    #     # Assume we want to use up all available MP and SP
-    #     # TODO: - create all possible structure combination based on current game state
-    #     #       ---- compute all valid coordinations
-    #     #       ---- make it a constant that gets only computed once
-    #     #       ---- y < game_map.HALF_ARENA and startx <= x <= endx
-    #     #       - create all possible combination of starting points for the mobile units
-    #     #       ---- use game_map.get_edge_locations(quadrant_description=game_map.BOTTOM_LEFT)
-    #     #       ---- use game_map.get_edge_locations(quadrant_description=game_map.BOTTOM_RIGHT)
-    #     #       ---- make it a constant that gets only computed once
-    #     all_structures = self.get_structures(game_state)
-    #     structures = all_structures[self.PLAYER0]
-    #     # Assumptions: - restrict supports to Y < 8
-    #     coordinates_raw = list(itertools.product(range(game_state.HALF_ARENA), range(game_state.ARENA_SIZE)))
-    #     return
+                debug_write("All locations: {}".format(self.scored_on_locations))
 
 
 if __name__ == "__main__":

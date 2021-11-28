@@ -2,10 +2,11 @@ import math
 import json
 import sys
 
-from gamelib import navigation
-from gamelib import util
-from .unit import GameUnit
-from gamelib import game_map
+# from .navigation import ShortestPathFinder
+from navigation import ShortestPathFinder
+from util import send_command, debug_write
+from unit import GameUnit
+from game_map import GameMap
 
 def is_stationary(unit_type):
     """
@@ -15,7 +16,8 @@ def is_stationary(unit_type):
         Returns: 
             Boolean, True if the unit is stationary, False otherwise.
     """
-    return unit_type in STRUCTURE_TYPES
+    # return unit_type in STRUCTURE_TYPES
+    return unit_type in ['FF', 'EF', 'DF']
 
 class GameState:
     """Represents the entire gamestate for a given turn
@@ -89,8 +91,8 @@ class GameState:
         MP = self.MP
         SP = self.SP
 
-        self.game_map = game_map.GameMap(self.config)
-        self._shortest_path_finder = navigation.ShortestPathFinder()
+        self.game_map = GameMap(self.config)
+        self._shortest_path_finder = ShortestPathFinder()
         self._build_stack = []
         self._deploy_stack = []
         self._player_resources = [
@@ -189,8 +191,8 @@ class GameState:
         """
         build_string = json.dumps(self._build_stack)
         deploy_string = json.dumps(self._deploy_stack)
-        util.send_command(build_string)
-        util.send_command(deploy_string)
+        send_command(build_string)
+        send_command(deploy_string)
 
     def get_resource(self, resource_type, player_index=0):
         """Gets a players resources
@@ -545,7 +547,7 @@ class GameState:
         """
 
         if(self.enable_warnings):
-            util.debug_write(message)
+            debug_write(message)
 
     def suppress_warnings(self, suppress):
         """Suppress all warnings
