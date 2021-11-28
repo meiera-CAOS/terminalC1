@@ -353,20 +353,36 @@ class Test(TestCase):
         sim_game_state = simulation.simulate(game)
 
         # test MP values
-        self.assertEqual(game.get_resources(player_index=0), [47, 7.3])
-        self.assertEqual(game.get_resources(player_index=1), [46, 6.5])
+        self.assertEqual(sim_game_state.get_resources(player_index=0), [47, 7.3])
+        self.assertEqual(sim_game_state.get_resources(player_index=1), [46, 6.5])
 
         # test HP total
-        self.assertEqual(game.my_health, 29, "assert own life total")
-        self.assertEqual(game.enemy_health, 28, "assert enemy life total")
+        self.assertEqual(sim_game_state.my_health, 29, "assert own life total")
+        self.assertEqual(sim_game_state.enemy_health, 28, "assert enemy life total")
 
         # ensure no mobile units in state
         assert(not helper_functions.get_mobile_units(sim_game_state, both_players=True))
 
     def test_simulation_mobile_unit_vs_tower(self):
         # spawn multiple mobile units that runs into a turret,
-        # balance such that the turret and all but one mobile unit is destroyed
+        # balanced such that the turret and all but one mobile unit is destroyed
         game = self.make_turn_0_map_europe_fall_2021()
+        game.attempt_spawn(TURRET, [13, 13], player_idx=0)
+        game.set_resource(MP, amount=8, player_index=1)
+        game.attempt_spawn(SCOUT, [21, 20], num=8, player_idx=1)
+        sim_game = simulation.simulate(game)
+        # assert HP of turret is correct. (barely survives: 36 = 8+7+6+5+4+3+2+1 attacks taken, 2dmg each, 3 hp)
+        self.assertEqual(sim_game.contains_stationary_unit([13, 13]).health, 3)
+        # assert player HP is correct, no damage taken
+        self.assertEqual(sim_game.my_health, 30, "assert own life total")
+        self.assertEqual(sim_game.enemy_health, 30, "assert enemy life total")
+        # assert no mobile units on map
+        assert not helper_functions.get_mobile_units(sim_game, both_players=True)
+
+        assert False
+
+    def test_simulation_mobile_units_vs_tower_and_wall(self):
+        # test targeting of attacking and defensive structure
         assert False
 
     def test_mobile_unit_speed(self):

@@ -1,8 +1,11 @@
+import copy
+
+import helper_functions
 from .game_state import GameState, is_stationary
 from .unit import GameUnit
 from .helper_functions import get_structures, get_mobile_units, get_all_units, round_half_up
 from .game_map import GameMap
-from .global_variables import DEBUG
+from .global_variables import DEBUG, STATIONARY_UNITS
 # from util
 
 import logging
@@ -104,27 +107,136 @@ def advance_unit(game_obj, unit, frame):
     return 0
 
 
-#   SELF_DESTRUCT
-#   The self-destruct only damages enemy units and has a range of 1.5.
-#   The damage dealt to each affected enemy is equal to the starting health of the self-destructing unit.
-#   However, self-destruct damage will only occur if the unit has moved at least 5 spaces before self-destructing.
-#   Units will still attack on the frame that they self-destruct.
-#   If units.self_destruct_flag == 2 it will deal damage on self destruct.
-#   The unit still attacks in the frame where they will self-destruct (one frame after reaching the bottleneck)
-#   is the unit still targetable? NO: the unit will not be attacked anymore the frame after it reached the self destructs.
-#   idk what happens if the path is freed the frame it would self destruct, i believe it self destructs.
+def target(game, unit):
+    """finds target of attack for unit
 
-def attack():
+    Args:
+        game: game state obj
+        unit: unit that looks for target to attack
+
+    Returns:
+        targeted unit or false if no unit was targeted.
+    """
+    player_id_of_unit = unit.player_index
+    enemy_player_index = (player_id_of_unit + 1) % 2
+    unit_loc = [unit.x, unit.y]
+    # get all units within range
+    enemy_units = game.game_map.get_units_in_range([unit.x, unit.y], unit.attackRange, enemy_player_index)
+    enemy_units = [x for x in enemy_units if x.health >= 0]  # remove all enemy_units with health below 0
+
+    # if mobile units in range, target mobile unit
+    if not enemy_units:
+        return False
+    if len(enemy_units) == 1:
+        return enemy_units[0]
+    else:  # multiple enemy units in range, check if there are mobile units, if yes reduce list to mobile units.
+        enemy_mobile_units = [x for x in enemy_units if x.unit_type not in STATIONARY_UNITS]
+        if enemy_mobile_units:
+            if len(enemy_mobile_units) == 1:
+                return enemy_mobile_units[0]
+            enemy_units = enemy_mobile_units  # multiple enemy mobile units
+
+        # pick nearest target(s)
+        nearest_enemy_units = []
+        nearest_distance = unit.attackRange + 1
+        for e_unit in enemy_units:
+            dist = game.game_map.distance_between_locations([e_unit.x, e_unit.y], unit_loc)
+            if dist < nearest_distance:
+                nearest_enemy_units = [e_unit]
+                nearest_distance = dist
+            elif dist == nearest_distance:
+                nearest_enemy_units.append(e_unit)
+        if DEBUG:
+            assert nearest_enemy_units  # not empty
+        if len(nearest_enemy_units) == 1:
+            return nearest_enemy_units[0]
+
+        # if multiple pick lowest health > 0 where shield is added to health already
+        lowest_health = nearest_enemy_units[0].health
+        lowest_health_units = [nearest_enemy_units[0]]
+        for idx in range(1, len(nearest_enemy_units)):  # check remaining units for lowest health.
+            n_unit = nearest_enemy_units[idx]
+            # TODO: add shield to health, i think max health is only used as start value and not cap
+            if n_unit.health < lowest_health:
+                lowest_health_units = [n_unit]
+            elif n_unit.health == lowest_health:
+                lowest_health_units.append(n_unit)
+        if DEBUG:
+            assert lowest_health >= 0  # as filtered out at start of this function
+        if len(lowest_health_units) == 1:
+            return lowest_health_units[0]
+
+        # multiple lowest health targets, choose y coordinate closest to your side
+        closest_y_units = []
+        closest_y_dist = 27
+        if player_id_of_unit == 0:  # closest to 0
+            y_side = 0
+        else:  # closest to 27
+            y_side = 27
+        for c_unit in lowest_health_units:
+            y_dist = abs(y_side - c_unit.y)
+            if y_dist < closest_y_dist:
+                closest_y_dist = y_dist
+                closest_y_units = [c_unit]
+            elif y_dist == closest_y_dist:
+                closest_y_units.append(c_unit)
+        if len(closest_y_units) == 1:
+            return closest_y_units[0]
+
+        # if multiple choose closest to edge,
+        # keep only the first closest in memory, it will default to it in case of ties
+        x_edge_1, x_edge_2 = [x_u for x_u in game.game_map.get_all_edges() if x_u[1] == closest_y_units[0].y]
+        closest_x_dist = 15
+        final_target = None  # there
+        for x_unit in closest_y_units:
+            x_dist = min(abs(x_unit.x - x_edge_1[0]), abs(x_unit.x - x_edge_2[0]))
+            if x_dist < closest_x_dist:
+                closest_x_dist = x_dist
+                final_target = x_unit
+        if DEBUG:
+            assert final_target
+        return final_target
+
+
+def attack(game, unit):
     """Performs the attacks of all units in order of creation
 
     Args:
-        args:
+        game: game state obj
+        unit: unit that performs attack
 
     Returns:
+        attacked unit or false if no unit was attacked.
     """
-    #  TODO: targeting and damage is in order of creation (keep track of creation order..?)
-    #   is the order given my the order of the units in get_mobile_units / get_attacking_units
-    #  never target a unit which is below 0 hp.
+    player_id_of_unit = unit.player_index
+    enemy_player_index = (player_id_of_unit + 1) % 2
+
+    # targeting for normal attack:
+    target_unit = target(game, unit)
+    if target_unit:  # if there is a target, deal damage to target apropriate to target type.
+        if target_unit.unit_type in STATIONARY_UNITS:
+            target_unit.health -= unit.damage_f
+        else:
+            target_unit.health -= unit.damage_i
+
+    if unit.self_destruct_flag == 2:  # do self destruct damage to all enemy units within selfdestruct range
+        # flag is only set for 5 steps or inerceptors
+        # I don't see the attributes for self destruct range / etc so I hard code it1.5.
+        sd_damage = unit.max_health
+        if unit.unit_type == "SI":  # interceptor
+            sd_range = 9
+            enemy_targets = game.game_map.get_units_in_range([unit.x, unit.y], sd_range, enemy_player_index)
+            enemy_mobile_targets = enemy_targets = [x for x in enemy_targets if x.unit_type not in STATIONARY_UNITS]
+        else:
+            sd_range = 1.5
+            enemy_targets = game.game_map.get_units_in_range([unit.x, unit.y], sd_range, enemy_player_index)
+        for e_target in enemy_targets:  # deal damage to all enemy targets in range
+            e_target.health -= sd_damage
+
+    if not target_unit:
+        return False
+    else:
+        return target_unit
 
 
 def clean_up(game_obj):
@@ -143,7 +255,7 @@ def clean_up(game_obj):
     for unit in all_units:
         '''if DEBUG and isinstance(unit, list):
             print("expected unit, got list: ", unit)'''
-        if unit.health < 0:  # TODO: list has no health!
+        if unit.health < 0:
             if is_stationary(unit.unit_type):
                 removed_structure = True
                 GameMap.remove_unit(game_obj.game_map, [unit.x, unit.y])
@@ -162,14 +274,9 @@ def clean_up(game_obj):
                         assert False
     return removed_structure
 
-    # remove unit from mobile_units
-    # remove unit from game state
-    # todo remove unit from attacking units?
-
-# TODO: to ensure no side effects to actual game state - call with game_obj object that's a deep copy of actually game object!
-
 
 def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you always lose the time tiebreaker.
+    # todo: speedup by updating the different lists (mobile units, all units, attacking units) instead of querying...
     """Simulates the game frames after turns have been submitted to calculate the next game state.
 
     Args:
@@ -179,15 +286,15 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
         simulated_game_state: the next GameState obj
         round_end_state: -1: loss, 0: ongoing, 1: win.
     """
+    game = copy.deepcopy(game_obj)
     life_lost_p0, life_lost_p1 = 0, 0  # hits taken in this round of player 0 and opponent (p1).
 
-    mobile_units = get_mobile_units(game_obj, both_players=True)
+    mobile_units = get_mobile_units(game, both_players=True)
     frame = 0
     if mobile_units:
-        frame =1
-        # calculate paths for each unit and (?)store it in mobile_units dict
-        for m_unit in mobile_units:
-            m_unit.path = GameState.find_path_to_edge(game_obj, start_location=[m_unit.x, m_unit.y])[1:]  # exclude current pos from path.
+        frame = 1
+        for m_unit in mobile_units:  # calculate paths for mobile units
+            m_unit.path = GameState.find_path_to_edge(game, start_location=[m_unit.x, m_unit.y])[1:]  # exclude current pos from path.
         # simulate frames
         while mobile_units:  # while mobile units are on the board
 
@@ -197,20 +304,22 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
                     # interceptor moves at 4th frame for the first time, every 4 frames
                     assert unit.speed == 0.25  # 4
                     if frame > 1 and frame % 4 == 0:
-                        scores = advance_unit(game_obj, unit, frame)
+                        scores = advance_unit(game, unit, frame)
                 else:
-                    scores = advance_unit(game_obj, unit, frame)  # scout and demolisher move every frame,
+                    scores = advance_unit(game, unit, frame)  # scout and demolisher move every frame,
                 if scores:
                     if unit.player_index == 0:
                         life_lost_p1 += 1
                     else:  # unit.player_index == 1
                         life_lost_p0 += 1
 
-            # for unit in attacking_units:  # ordered queue pointing to unit object?
-                # 2) All units attack. See ‘Targeting’ in advanced info
-            removed_structure = clean_up(game_obj)  # 3) Units that were reduced below 0 health are removed
+            atk_units = helper_functions.get_attacking_units(game, both_players=True)
+            for unit in atk_units:  # assume order is correct ;)
+                attack(game, unit)  # decide on target, deal damage
 
-            mobile_units = get_mobile_units(game_obj, both_players=True)  # update mobile units
+            removed_structure = clean_up(game)  # 3) Units that were reduced below 0 health are removed
+
+            mobile_units = get_mobile_units(game, both_players=True)  # update mobile units
             if removed_structure:
                 for m_unit in mobile_units:  # if structure was removed: recompute path of mobile units.
                     m_unit.path = GameState.find_path_to_edge([m_unit.x, m_unit.y])[1:]
@@ -226,34 +335,34 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
     ### AT END OF ROUND: Remove pending_remove structures and refund, increase resources for next round
 
     # set new HP
-    game_obj.my_health -= life_lost_p0
-    game_obj.enemy_health -= life_lost_p1
+    game.my_health -= life_lost_p0
+    game.enemy_health -= life_lost_p1
 
     # todo: check end state ongoing / win / loss. adapt return value and where it's called (tests).
 
     # for standing structures, for each player refund structures marked as pending_remove and remove from game_map
-    structures = get_structures(game_obj)
+    structures = get_structures(game)
     structures_p0 = structures[0]
     structures_p1 = structures[1]
     refund_p0, refund_p1 = 0, 0
     for structure in structures_p0:
-        refund_p0 = round_half_up(refund_p0 + manage_pending_removal(game_obj, structure, player_idx=0), 1)
+        refund_p0 = round_half_up(refund_p0 + manage_pending_removal(game, structure, player_idx=0), 1)
     for structure in structures_p1:
-        refund_p1 = round_half_up(refund_p1 + manage_pending_removal(game_obj, structure, player_idx=1), 1)
+        refund_p1 = round_half_up(refund_p1 + manage_pending_removal(game, structure, player_idx=1), 1)
 
     # add MP = 1 resources
-    curr_mp_0 = game_obj.get_resource(resource_type=1, player_index=0)
-    curr_mp_1 = game_obj.get_resource(resource_type=1, player_index=1)
-    next_mp_0 = game_obj.project_future_MP(turns_in_future=1, player_index=0, current_MP=curr_mp_0)
-    next_mp_1 = game_obj.project_future_MP(turns_in_future=1, player_index=1, current_MP=curr_mp_1)
-    game_obj.set_resource(resource_type=1, amount=next_mp_0, player_index=0)
-    game_obj.set_resource(resource_type=1, amount=next_mp_1, player_index=1)
+    curr_mp_0 = game.get_resource(resource_type=1, player_index=0)
+    curr_mp_1 = game.get_resource(resource_type=1, player_index=1)
+    next_mp_0 = game.project_future_MP(turns_in_future=1, player_index=0, current_MP=curr_mp_0)
+    next_mp_1 = game.project_future_MP(turns_in_future=1, player_index=1, current_MP=curr_mp_1)
+    game.set_resource(resource_type=1, amount=next_mp_0, player_index=0)
+    game.set_resource(resource_type=1, amount=next_mp_1, player_index=1)
     # add SP = 0 resources
-    curr_sp_0 = game_obj.get_resource(resource_type=0, player_index=0)
-    curr_sp_1 = game_obj.get_resource(resource_type=0, player_index=1)
-    game_obj.set_resource(resource_type=0, amount=(curr_sp_0 + 5 + life_lost_p1 + refund_p0), player_index=0)
-    game_obj.set_resource(resource_type=0, amount=(curr_sp_1 + 5 + life_lost_p0 + refund_p1), player_index=1)
-    return game_obj
+    curr_sp_0 = game.get_resource(resource_type=0, player_index=0)
+    curr_sp_1 = game.get_resource(resource_type=0, player_index=1)
+    game.set_resource(resource_type=0, amount=(curr_sp_0 + 5 + life_lost_p1 + refund_p0), player_index=0)
+    game.set_resource(resource_type=0, amount=(curr_sp_1 + 5 + life_lost_p0 + refund_p1), player_index=1)
+    return game
 
 # TODO: return log message if simulation predicted different outcome than observed in online play.
 # when running algo online, run simulation on effectively played turns (to verify).

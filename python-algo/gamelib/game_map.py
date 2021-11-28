@@ -261,6 +261,31 @@ class GameMap:
                     locations.append(new_location)
         return locations
 
+    def get_units_in_range(self, location, range, player_idx=-1):
+        """Gets all units in a circular area around a location
+
+        Args:
+            location: The center of our search area
+            radius: The radius of our search area
+            player_idx: -1: all units, 0: units of player_0, 1: units of player_1 (enemy)
+
+        Returns:
+            List of units that are within our search area corresponding to player_idx
+        """
+        units_in_range = []
+        loc_in_range = self.get_locations_in_range(location, range)
+        for loc in loc_in_range:
+            x, y = loc
+            if player_idx == -1:
+                units_in_range.append(self.__map[x][y])
+            else:
+                for unit in self.__map[x][y]:
+                    if unit.player_index == player_idx:
+                        units_in_range.append(unit)
+        return units_in_range
+
+
+
     def move_unit_on_map(self, unit, new_location):
         """moves mobile unit from current location [unit.x, unit.y] to new_location
 

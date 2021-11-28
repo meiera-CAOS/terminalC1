@@ -1,7 +1,7 @@
 import itertools
 from copy import deepcopy
 
-from global_variables import STATIONARY_UNITS
+from global_variables import STATIONARY_UNITS, ATK_UNITS
 import random
 import numpy as np
 import math
@@ -128,6 +128,36 @@ def get_mobile_units(game_state, both_players=False):
                     else:
                         mobile_units.append(unit)
     return mobile_units
+
+
+def get_attacking_units(game_state, both_players=False):
+    """
+    This goes through the current gamget_mobile_unitse_map and returns the mobile units that are currently on the game map
+    :param
+        game_state: Current GameState object
+        both_players: Boolean, if True return a list of all mobile units, if false return a dict with player_id as keys
+    :return:           Returns a dict where key is the player id and values their current structures on the game map
+    """
+    game_map = game_state.game_map._GameMap__map  # list of list, cf. game_map __empty_grid function
+    # 0 = us
+    # 1 = adversary
+    if not both_players:
+        atk_units = {0: [], 1: []}
+    else:
+        atk_units = []
+    for x, x_item in enumerate(game_map):
+        for y, units in enumerate(x_item):
+            if units and units[0].unit_type in ATK_UNITS:
+                # y_item is a mobile unit or list of mobile units
+                for unit in units:
+                    if not both_players:
+                        if unit.player_index == 0:
+                            atk_units[0].append(unit)
+                        else:
+                            atk_units[1].append(unit)
+                    else:
+                        atk_units.append(unit)
+    return atk_units
 
 
 def get_score(game_state, player_id=0, weights=None):

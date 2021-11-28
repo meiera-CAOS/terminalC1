@@ -25,9 +25,10 @@ class GameUnit:
         * attackRange (float): The effective range of this unit for attacking
         * shieldRange (float): The effective range of this unit for shielding
         * max_health (float): The starting health of this unit. Note than 'health' can be increased beyond this value by shielding in some game configurations.
-        * health (float): The current health of this unit
+        * health (float): The current health of this unit # add shield to health of mobile units
         * cost ([int, int]): The resource costs of this unit first is SP second is MP
-        * shieldPerUnit (float): how much shield is given per unit
+        * shieldPerUnit (float): how much shield is given per unit  # TODO: verify this is 0.34
+        * shieldsFrom: list of locations (of friendly support structures which provided the shield buff)
         * pending_removal (boolean): If this unit is marked for removal by its owner
         * upgraded (boolean): If this unit is upgraded
         * path: The current pathing.

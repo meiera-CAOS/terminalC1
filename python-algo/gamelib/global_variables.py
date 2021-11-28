@@ -3,6 +3,7 @@ import json
 DEBUG = True
 
 STATIONARY_UNITS = ['FF', 'EF', 'DF']
+ATK_UNITS = ['DF', 'PI', 'EI', 'SI']
 
 string_config = """
             {
