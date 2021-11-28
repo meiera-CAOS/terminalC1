@@ -7,8 +7,11 @@ import warnings
 from sys import maxsize
 import json
 
+from algocore import AlgoCore
+from game_state import GameState
 from gamelib import helper_functions
-
+from unit import GameUnit
+from util import debug_write
 
 """
 Most of the algo code you write will be in this file unless you create new
@@ -23,18 +26,18 @@ Advanced strategy tips:
   the actual current map state.
 """
 
-class AlgoStrategy(gamelib.AlgoCore):
+class AlgoStrategy(AlgoCore):
     def __init__(self):
         super().__init__()
         seed = random.randrange(maxsize)
         random.seed(seed)
-        gamelib.debug_write('Random seed: {}'.format(seed))
+        debug_write('Random seed: {}'.format(seed))
 
     def on_game_start(self, config):
         """ 
         Read in config and perform any initial setup here 
         """
-        gamelib.debug_write('Configuring your custom algo strategy...')
+        debug_write('Configuring your custom algo strategy...')
         self.config = config
         global WALL, SUPPORT, TURRET, SCOUT, DEMOLISHER, INTERCEPTOR, MP, SP
         WALL = config["unitInformation"][0]["shorthand"]
@@ -59,8 +62,8 @@ class AlgoStrategy(gamelib.AlgoCore):
         unit deployments, and transmitting your intended deployments to the
         game engine.
         """
-        game_state = gamelib.GameState(self.config, turn_state)
-        gamelib.debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
+        game_state = GameState(self.config, turn_state)
+        debug_write('Performing turn {} of your custom algo strategy'.format(game_state.turn_number))
         game_state.suppress_warnings(True)  #Comment or remove this line to enable warnings.
 
         # if not self.all_coordinates:
@@ -208,7 +211,7 @@ class AlgoStrategy(gamelib.AlgoCore):
             damage = 0
             for path_location in path:
                 # Get number of enemy turrets that can attack each location and multiply by turret damage
-                damage += len(game_state.get_attackers(path_location, 0)) * gamelib.GameUnit(TURRET, game_state.config).damage_i
+                damage += len(game_state.get_attackers(path_location, 0)) * GameUnit(TURRET, game_state.config).damage_i
             damages.append(damage)
         
         # Now just return the location that takes the least damage
@@ -247,9 +250,9 @@ class AlgoStrategy(gamelib.AlgoCore):
             # When parsing the frame data directly, 
             # 1 is integer for yourself, 2 is opponent (StarterKit code uses 0, 1 as player_index instead)
             if not unit_owner_self:
-                gamelib.debug_write("Got scored on at: {}".format(location))
+                debug_write("Got scored on at: {}".format(location))
                 self.scored_on_locations.append(location)
-                gamelib.debug_write("All locations: {}".format(self.scored_on_locations))
+                debug_write("All locations: {}".format(self.scored_on_locations))
 
 
 if __name__ == "__main__":

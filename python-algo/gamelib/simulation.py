@@ -6,17 +6,10 @@ from .game_map import GameMap
 
 import logging
 
-<<<<<<< Updated upstream
 log = logging.getLogger(__name__)
 
 debug = True
-=======
-log = logging(__name__)
 
-log.info('')
-log.debug("")
-log.warn('')
->>>>>>> Stashed changes
 
 def manage_pending_removal(game_obj, structure, player_idx):
     refund_val = 0

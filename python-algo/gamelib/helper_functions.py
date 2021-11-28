@@ -72,9 +72,6 @@ def get_structures(game_state):
     return structures
 
 
-<<<<<<< Updated upstream
-def get_mobile_units(game_state, both_players=False):
-=======
 def get_current_structures(game_state):
     all_structures = get_structures(game_state)
     my_structures = all_structures[0]
@@ -91,8 +88,7 @@ def get_current_structures(game_state):
     return walls, turrets, supports
 
 
-def get_mobile_units(game_state):
->>>>>>> Stashed changes
+def get_mobile_units(game_state, both_players=False):
     """
     This goes through the current game_map and returns the mobile units that are currently on the game map
     :param game_state: Current GameState object
@@ -293,7 +289,8 @@ def structure_build_combination_generator(game_state, player_id=0, no_samples=10
 def _attempt_upgrade(game_state, units, unit_weight, player_id=0):
     if units:
         counter = 0
-        for unit in random.shuffle(units):
+        random.shuffle(units)
+        for unit in units:
             game_state.attempt_upgrade(locations=[unit.x, unit.y], player_idx=player_id)
             counter += 1
             if counter < unit_weight:
@@ -345,4 +342,5 @@ def combination_generator(game_state, no_samples=10, new_structure_budget_share=
     upgraded_game_states = structure_upgrade_combination_generator(game_state_list=new_game_states , player_id=player_id, upgrade_structure_budget_share=1.0 - new_structure_budget_share)
     updated_game_states = random_remove_structure(game_state_list=upgraded_game_states, removal_pct=removal_pct, player_id=player_id)
 
+    # TODO: - do the same for mobile units
     return updated_game_states

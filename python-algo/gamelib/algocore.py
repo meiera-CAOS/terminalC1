@@ -1,6 +1,7 @@
 import json
-from gamelib import game_state
-from gamelib import util
+
+from game_state import GameState
+from util import get_command, debug_write, BANNER_TEXT, send_command
 
 class AlgoCore(object):
     """
@@ -30,8 +31,8 @@ class AlgoCore(object):
         algo_strategy.py inherits from AlgoCore and overrides this on turn function. 
         Adjusting the on_turn function in algo_strategy is the main way to adjust your algo's logic. 
         """
-        util.send_command("[]")
-        util.send_command("[]")
+        send_command("[]")
+        send_command("[]")
     
     def on_action_frame(self, action_frame_game_state):
         """
@@ -50,12 +51,12 @@ class AlgoCore(object):
         engine, proccess this information, and respond if needed to take it's turn. 
         The algo continues this loop until it recieves the "End" turn message from the game.
         """
-        util.debug_write(util.BANNER_TEXT)
+        debug_write(BANNER_TEXT)
 
         while True:
             # Note: Python blocks and hangs on stdin. Can cause issues if connections aren't setup properly and may need to
             # manually kill this Python program.
-            game_state_string = util.get_command()
+            game_state_string = get_command()
             if "replaySave" in game_state_string:
                 """
                 This means this must be the config file. So, load in the config file as a json and add it to your AlgoStrategy class.
@@ -80,15 +81,15 @@ class AlgoCore(object):
                     """
                     This is the end game message. This means the game is over so break and finish the program.
                     """
-                    util.debug_write("Got end state, game over. Stopping algo.")
+                    debug_write("Got end state, game over. Stopping algo.")
                     break
                 else:
                     """
                     Something is wrong? Received an incorrect or improperly formatted string.
                     """
-                    util.debug_write("Got unexpected string with turnInfo: {}".format(game_state_string))
+                    debug_write("Got unexpected string with turnInfo: {}".format(game_state_string))
             else:
                 """
                 Something is wrong? Received an incorrect or improperly formatted string.
                 """
-                util.debug_write("Got unexpected string : {}".format(game_state_string))
+                debug_write("Got unexpected string : {}".format(game_state_string))

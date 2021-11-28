@@ -1,7 +1,6 @@
 import math
-from gamelib import unit
-from gamelib import util
-from gamelib import game_state
+from unit import GameUnit
+from util import debug_write
 
 class GameMap:
     """Holds data about the current game map and provides functions
@@ -178,15 +177,10 @@ class GameMap:
             self.warn("Player index {} is invalid. Player index should be 0 or 1.".format(player_index))
 
         x, y = location
-<<<<<<< Updated upstream
-        new_unit = unit.GameUnit(unit_type, self.config, player_index, None, location[0], location[1])
-        if not new_unit.stationary:
-=======
         new_unit = GameUnit(unit_type, self.config, player_index, None, location[0], location[1])
-        if not new_unit.stationary: # mobile units
->>>>>>> Stashed changes
+        if not new_unit.stationary:
             self.__map[x][y].append(new_unit)
-        else: # structure units
+        else:
             self.__map[x][y] = [new_unit]
 
     def remove_mobile_unit(self, unit):
@@ -281,4 +275,4 @@ class GameMap:
         Used internally by game_map to print out default messaging
         """
         if(self.enable_warnings):
-            util.debug_write(message)
+            debug_write(message)
