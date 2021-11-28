@@ -1,4 +1,6 @@
 import math
+
+import game_state
 from unit import GameUnit
 from util import debug_write
 

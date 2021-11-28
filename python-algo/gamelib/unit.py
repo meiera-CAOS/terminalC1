@@ -52,7 +52,8 @@ class GameUnit:
         self.self_destruct_flag = 0
 
     def __serialize_type(self):
-        from game_state import STRUCTURE_TYPES, UNIT_TYPE_TO_INDEX, SUPPORT
+        # from .game_state import STRUCTURE_TYPES, UNIT_TYPE_TO_INDEX, SUPPORT  # TODO Fix import
+        from global_variables import UNIT_TYPE_TO_INDEX
         type_config = self.config["unitInformation"][UNIT_TYPE_TO_INDEX[self.unit_type]]
         self.stationary = type_config["unitCategory"] == 0
         self.speed = type_config.get("speed", 0)
@@ -65,7 +66,8 @@ class GameUnit:
         self.cost = [type_config.get("cost1", 0), type_config.get("cost2", 0)]
 
     def upgrade(self):
-        from game_state import UNIT_TYPE_TO_INDEX
+        # from .game_state import UNIT_TYPE_TO_INDEX  # TODO Fix import
+        from global_variables import UNIT_TYPE_TO_INDEX
         type_config = self.config["unitInformation"][UNIT_TYPE_TO_INDEX[self.unit_type]].get("upgrade", {})
         self.speed = type_config.get("speed", self.speed)
         self.damage_f = type_config.get("attackDamageTower", self.damage_f)
