@@ -147,7 +147,7 @@ def get_shield_units(game_state, both_players=False):  # could generalize to get
         shield_units = []
     for x, x_item in enumerate(game_map):
         for y, units in enumerate(x_item):
-            if units and not units[0].unit_type == "EF":
+            if units and units[0].unit_type == "EF":
                 # y_item is a mobile unit or list of mobile units
                 for unit in units:
                     if not both_players:

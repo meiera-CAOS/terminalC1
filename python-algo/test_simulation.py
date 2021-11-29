@@ -372,15 +372,11 @@ class Test(TestCase):
         game.attempt_spawn(SCOUT, [21, 20], num=8, player_idx=1)
         sim_game = simulation.simulate(game)
         # assert HP of turret is correct. (barely survives: 36 = 8+7+6+5+4+3+2+1 attacks taken, 2dmg each, 3 hp)
-        self.assertEqual(sim_game.contains_stationary_unit([13, 13]).health, 3)  # todo, fix this used to work!
-        # SOMEHOW 7/8 scouts survive and kill the tower..? sideeffect from other unit tests? got shields?
-        # assert player HP is correct, no damage taken
+        self.assertEqual(sim_game.contains_stationary_unit([13, 13]).health, 3)
         self.assertEqual(sim_game.my_health, 30, "assert own life total")
         self.assertEqual(sim_game.enemy_health, 30, "assert enemy life total")
         # assert no mobile units on map
         assert not helper_functions.get_mobile_units(sim_game, both_players=True)
-
-        assert False
 
     '''def test_simulation_mobile_units_vs_tower_and_wall(self):
         # test targeting of attacking and defensive structure
@@ -414,7 +410,7 @@ class Test(TestCase):
 
         # one scout dealt damage
         # tower has (5*2 + 4*2 + 3*2 + 2*2 + 1) * 2 damage = 58, 75-58 = 17 < 75/4
-        self.assertEqual(sim_game.contains_stationary_unit([15, 14]).health, 17)  # todo, fix! why one hp?
+        self.assertEqual(sim_game.contains_stationary_unit([15, 14]).health, 17)
         self.assertEqual(sim_game.enemy_health, 29)
 
         # two upgraded shields at y = 14 + one at y = 27-7 -> turret needs three hits

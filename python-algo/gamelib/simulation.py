@@ -128,7 +128,7 @@ def give_shield(game, supports_list, player_index=0):
             radius = 3.5
             shield_value = 2.0
         friendly_units_in_range = game.game_map.get_units_in_range([shield.x, shield.y], radius, player_idx=player_index)
-        m_units_in_range = [x for x in friendly_units_in_range if x not in STATIONARY_UNITS]
+        m_units_in_range = [x for x in friendly_units_in_range if x.unit_type not in STATIONARY_UNITS]
         for m_unit in m_units_in_range:
             if [shield.x, shield.y] not in m_unit.shieldsFrom:  # check buff not already given
                 m_unit.shieldsFrom.append([shield.x, shield.y])
@@ -171,7 +171,7 @@ def target(game, unit):
     unit_loc = [unit.x, unit.y]
     # get all units within range
     enemy_units = game.game_map.get_units_in_range([unit.x, unit.y], unit.attackRange, enemy_player_index)
-    enemy_units = [x for x in enemy_units if x.health >= 1]  # remove all enemy_units with health below 0
+    enemy_units = [x for x in enemy_units if x.health > 0]  # remove all enemy_units with health below 0
 
     # if mobile units in range, target mobile unit
     if not enemy_units:
@@ -211,7 +211,7 @@ def target(game, unit):
             elif n_unit.health == lowest_health:
                 lowest_health_units.append(n_unit)
         if DEBUG:
-            assert lowest_health >= 1  # as filtered out at start of this function
+            assert lowest_health > 0  # as filtered out at start of this function
         if len(lowest_health_units) == 1:
             return lowest_health_units[0]
 
@@ -304,7 +304,7 @@ def clean_up(game_obj):
     for unit in all_units:
         '''if DEBUG and isinstance(unit, list):
             print("expected unit, got list: ", unit)'''
-        if unit.health < 1:
+        if unit.health <= 0:
             if is_stationary(unit.unit_type):
                 removed_structure = True
                 GameMap.remove_unit(game_obj.game_map, [unit.x, unit.y])
