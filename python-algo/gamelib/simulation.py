@@ -205,7 +205,6 @@ def target(game, unit):
         lowest_health_units = [nearest_enemy_units[0]]
         for idx in range(1, len(nearest_enemy_units)):  # check remaining units for lowest health.
             n_unit = nearest_enemy_units[idx]
-            # TODO: add shield to health, i think max health is only used as start value and not cap
             if n_unit.health < lowest_health:
                 lowest_health_units = [n_unit]
             elif n_unit.health == lowest_health:
@@ -324,7 +323,7 @@ def clean_up(game_obj):
     return removed_structure
 
 
-def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you always lose the time tiebreaker.
+def simulate(game_obj, game_turn=0):  # todo: indicate victory, loss, or tie. suppose you always lose the time tiebreaker.
     # todo: speedup by updating the different lists (mobile units, all units, attacking units) instead of querying...
     """Simulates the game frames after turns have been submitted to calculate the next game state.
 
@@ -393,7 +392,16 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
     game.my_health -= life_lost_p0
     game.enemy_health -= life_lost_p1
 
-    # todo: check end state ongoing / win / loss. adapt return value and where it's called (tests).
+    # 0: ongoing, -1: lost, 1: won
+    we_win = 0
+    if game.my_health <= 0:  # always lose ties (computation time)
+        we_win = -1
+    elif game.enemy_health <= 0:
+        we_win = 1
+    if game_turn == 100:
+        we_win = -1
+        if game.my_health > game.enemy_health:
+            we_win = 1
 
     # for standing structures, for each player refund structures marked as pending_remove and remove from game_map
     structures = get_structures(game)
@@ -417,11 +425,5 @@ def simulate(game_obj):  # todo: indicate victory, loss, or tie. suppose you alw
     curr_sp_1 = game.get_resource(resource_type=0, player_index=1)
     game.set_resource(resource_type=0, amount=(curr_sp_0 + 5 + life_lost_p1 + refund_p0), player_index=0)
     game.set_resource(resource_type=0, amount=(curr_sp_1 + 5 + life_lost_p0 + refund_p1), player_index=1)
-    return game
-
-# TODO: return log message if simulation predicted different outcome than observed in online play.
-# when running algo online, run simulation on effectively played turns (to verify).
-# if observed next state differs from simulated last state: util.DEBUG_write('')
-#   store states in logfile
-
+    return game, we_win
 

@@ -229,7 +229,7 @@ class Test(TestCase):
         future_mp_p1 = game.project_future_MP(turns_in_future=1, player_index=1, current_MP=game.get_resource(MP, 1))
 
         # simulate
-        sim_game_state = simulation.simulate(game)
+        sim_game_state, _ = simulation.simulate(game)
 
         # assert correct new resource values
         self.assertEqual(sim_game_state.get_resource(resource_type=MP, player_index=0),
@@ -308,7 +308,7 @@ class Test(TestCase):
         self.assertEqual(p_1_refund, 5.5, "p_1 refund calculation")
         assert game.contains_stationary_unit([12, 20]).pending_removal
         # simulate
-        sim_game_state = simulation.simulate(game)
+        sim_game_state, _ = simulation.simulate(game)
 
         # assert correct new resource values (initial values 40 + turn + refund)
         self.assertEqual(40 - p0_sp_cost + 5 + p_0_refund,
@@ -349,8 +349,7 @@ class Test(TestCase):
         game.attempt_spawn(INTERCEPTOR, [0, 13], player_idx=0)  # SI
         game.attempt_spawn(DEMOLISHER, [27, 14], player_idx=1)  # EI
         units = helper_functions.get_mobile_units(game)
-        print(units)
-        sim_game_state = simulation.simulate(game)
+        sim_game_state, game_end = simulation.simulate(game)
 
         # test MP values
         self.assertEqual(sim_game_state.get_resources(player_index=0), [47, 7.3])
@@ -362,6 +361,7 @@ class Test(TestCase):
 
         # ensure no mobile units in state
         assert(not helper_functions.get_mobile_units(sim_game_state, both_players=True))
+        self.assertEqual(game_end, 0)  # game ongoing
 
     def test_simulation_mobile_unit_vs_tower(self):
         # spawn multiple mobile units that runs into a turret,
@@ -370,11 +370,12 @@ class Test(TestCase):
         game.attempt_spawn(TURRET, [13, 13], player_idx=0)
         game.set_resource(MP, amount=8, player_index=1)
         game.attempt_spawn(SCOUT, [21, 20], num=8, player_idx=1)
-        sim_game = simulation.simulate(game)
+        sim_game, game_end = simulation.simulate(game)
         # assert HP of turret is correct. (barely survives: 36 = 8+7+6+5+4+3+2+1 attacks taken, 2dmg each, 3 hp)
         self.assertEqual(sim_game.contains_stationary_unit([13, 13]).health, 3)
         self.assertEqual(sim_game.my_health, 30, "assert own life total")
         self.assertEqual(sim_game.enemy_health, 30, "assert enemy life total")
+        self.assertEqual(game_end, 0)
         # assert no mobile units on map
         assert not helper_functions.get_mobile_units(sim_game, both_players=True)
 
@@ -406,7 +407,7 @@ class Test(TestCase):
         game.attempt_spawn(SUPPORT, support_locations, player_idx=0)
         game.attempt_upgrade(support_locations, player_idx=0)
         game.attempt_spawn(SCOUT, [7, 6], num=5, player_idx=0)
-        sim_game = simulation.simulate(game)
+        sim_game, _ = simulation.simulate(game)
 
         # one scout dealt damage
         # tower has (5*2 + 4*2 + 3*2 + 2*2 + 1) * 2 damage = 58, 75-58 = 17 < 75/4
@@ -420,9 +421,23 @@ class Test(TestCase):
         game.attempt_spawn(SUPPORT, support_locations, player_idx=1)
         game.attempt_upgrade(support_locations, player_idx=1)
         game.attempt_spawn(SCOUT, [21, 20], num=5, player_idx=1)
-        sim_game_2 = simulation.simulate(game)
+        sim_game_2, _ = simulation.simulate(game)
         # tower has (5*3 + 4*3 + 3*3) * 2 damage = 72,-> 3 hp
         self.assertEqual(sim_game_2.contains_stationary_unit([11, 13]).health, 3)
         self.assertEqual(sim_game_2.my_health, 28)
+
+    def test_game_end(self):
+        game = self.make_turn_0_map_europe_fall_2021()
+        game.set_resource(MP, amount=30, player_index=1)
+        game.attempt_spawn(SCOUT, [21, 20], num=30, player_idx=1)
+        sim_game, game_end = simulation.simulate(game, game_turn=99)
+        self.assertEqual(game_end, -1)  # took 30 damage, lost
+        self.assertEqual(sim_game.my_health, 0)
+
+        game_2 = self.make_turn_0_map_europe_fall_2021()
+        game_2.attempt_spawn(SCOUT, [5, 8], num=1, player_idx=0)
+        sim_game_2, game_end_2 = simulation.simulate(game_2, game_turn=100)  # count turns from 1st turn.
+        self.assertEqual(game_end_2, 1)  # dealt 1 damage, won
+        self.assertEqual(sim_game_2.my_health, 1 + sim_game_2.enemy_health)
 
     # todo: read rules again and check for forgotten feature of simulation.
