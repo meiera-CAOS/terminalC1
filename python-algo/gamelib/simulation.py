@@ -323,12 +323,12 @@ def clean_up(game_obj):
     return removed_structure
 
 
-def simulate(game_obj, game_turn=0):  # todo: indicate victory, loss, or tie. suppose you always lose the time tiebreaker.
-    # todo: speedup by updating the different lists (mobile units, all units, attacking units) instead of querying...
+def simulate(game_obj, game_turn=0):
     """Simulates the game frames after turns have been submitted to calculate the next game state.
 
     Args:
         game_obj: a GameState obj (includes newly deployed mobile units)
+        game_turn: The turn of the game (starts at 1 ends at 100 latest)
 
     Returns:
         simulated_game_state: the next GameState obj
